@@ -23,23 +23,26 @@ if ( ! get_option( 'ptai_delete_data_on_uninstall' ) ) {
 global $wpdb;
 
 /*
- * 1. Delete all ptai_file posts (and their postmeta).
+ * 1. Delete all ptai_file posts (and their postmeta), in batches
+ *    to keep memory bounded on large libraries.
  */
-$ptai_post_ids = get_posts(
-	array(
-		'post_type'        => 'ptai_file',
-		'post_status'      => 'any',
-		'numberposts'      => -1,
-		'fields'           => 'ids',
-		'suppress_filters' => true,
-	)
-);
+$ptai_batch_size = 200;
 
-if ( ! empty( $ptai_post_ids ) ) {
+do {
+	$ptai_post_ids = get_posts(
+		array(
+			'post_type'        => 'ptai_file',
+			'post_status'      => 'any',
+			'numberposts'      => $ptai_batch_size,
+			'fields'           => 'ids',
+			'suppress_filters' => true,
+		)
+	);
+
 	foreach ( $ptai_post_ids as $ptai_post_id ) {
 		wp_delete_post( $ptai_post_id, true );
 	}
-}
+} while ( count( $ptai_post_ids ) === $ptai_batch_size );
 
 /*
  * 2. Delete all ptai_category taxonomy terms.
@@ -59,10 +62,9 @@ if ( ! is_wp_error( $ptai_term_ids ) && ! empty( $ptai_term_ids ) ) {
 }
 
 /*
- * 3. Defensive sweep: remove embedding postmeta from any post type
- *    (in case files were converted or attached elsewhere).
+ * 3. Defensive sweep: remove any leftover plugin postmeta from
+ *    any post type (in case files were converted or reattached).
  */
-$wpdb->query( "DELETE FROM {$wpdb->postmeta} WHERE meta_key LIKE '_ptai_embedding%'" );
 $wpdb->query( "DELETE FROM {$wpdb->postmeta} WHERE meta_key LIKE '_ptai_%'" );
 
 /*
