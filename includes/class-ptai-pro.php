@@ -1,6 +1,16 @@
 <?php
 /**
- * Pro version detection and upgrade messaging.
+ * Passive upgrade-marketing renderer.
+ *
+ * THIS CLASS IS INTENTIONALLY NON-FUNCTIONAL.
+ *
+ * PaperTrail AI is 100% free. There is no license enforcement,
+ * no feature gating, and no Pro detection anywhere in this plugin.
+ *
+ * The methods here ONLY render static marketing copy in admin
+ * screens that points interested users toward the Ask Adam Pro
+ * product at askadamit.com/purchase. Nothing in this file affects
+ * plugin behavior, capability, or feature availability.
  *
  * @package PaperTrail_AI
  */
@@ -10,54 +20,83 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Class PTAI_Pro
  *
- * Detects the PaperTrail AI Pro / Ask Adam Pro extension and exposes
- * hooks the Pro plugin can attach to.
+ * Static marketing-notice helper. No logic, no checks, no gating.
  */
 class PTAI_Pro {
+
+	/**
+	 * Hardcoded Ask Adam Pro purchase URL.
+	 *
+	 * @var string
+	 */
+	const PURCHASE_URL = 'https://askadamit.com/purchase';
 
 	/**
 	 * Constructor.
 	 */
 	public function __construct() {
-		// @todo Fire pro hooks late on plugins_loaded.
+		// Intentionally empty. No hooks. No state. No checks.
 	}
 
 	/**
-	 * Whether the Pro plugin is active.
+	 * Render the passive upgrade sidebar in admin.
 	 *
-	 * @return bool
+	 * Outputs a static HTML aside listing Ask Adam Pro features
+	 * with a link to the purchase page. Renders the same content
+	 * for every user — no conditionals.
+	 *
+	 * @return void
 	 */
-	public static function is_pro_active() {
-		// @todo Check for a Pro constant or class.
-		return defined( 'PTAI_PRO_VERSION' );
+	public function render_upgrade_sidebar() {
+		// @todo Echo a sidebar/aside element with a heading,
+		//       the features list from get_pro_features_list(),
+		//       and a button linking to get_purchase_url().
+		?>
+		<aside class="ptai-upgrade-sidebar" aria-label="<?php esc_attr_e( 'Ask Adam Pro', 'papertrail-ai' ); ?>">
+			<h2 class="ptai-upgrade-sidebar__title">
+				<?php esc_html_e( 'Ask Adam Pro', 'papertrail-ai' ); ?>
+			</h2>
+			<p class="ptai-upgrade-sidebar__lead">
+				<?php esc_html_e( 'Take your document workflow further with the full Ask Adam suite.', 'papertrail-ai' ); ?>
+			</p>
+			<ul class="ptai-upgrade-sidebar__features">
+				<?php foreach ( $this->get_pro_features_list() as $ptai_feature ) : ?>
+					<li><?php echo esc_html( $ptai_feature ); ?></li>
+				<?php endforeach; ?>
+			</ul>
+			<p>
+				<a class="button button-primary"
+					href="<?php echo esc_url( $this->get_purchase_url() ); ?>"
+					target="_blank"
+					rel="noopener noreferrer">
+					<?php esc_html_e( 'Learn more at askadamit.com', 'papertrail-ai' ); ?>
+				</a>
+			</p>
+		</aside>
+		<?php
 	}
 
 	/**
-	 * URL to the upgrade page.
+	 * Plain marketing copy. No conditionals. Pure strings.
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_pro_features_list() {
+		return array(
+			__( 'Conversational document Q&A across your full library', 'papertrail-ai' ),
+			__( 'Multi-document context retrieval with citations', 'papertrail-ai' ),
+			__( 'Bulk embedding generation and re-indexing tools', 'papertrail-ai' ),
+			__( 'Advanced usage analytics and reporting', 'papertrail-ai' ),
+			__( 'Priority email support from the Ask Adam team', 'papertrail-ai' ),
+		);
+	}
+
+	/**
+	 * Hardcoded purchase URL. No logic.
 	 *
 	 * @return string
 	 */
-	public static function get_upgrade_url() {
-		// @todo Return a filterable upgrade URL.
-		return 'https://example.com/papertrail-ai-pro';
-	}
-
-	/**
-	 * Render an upgrade notice for a given context.
-	 *
-	 * @param string $context Where the notice is being rendered.
-	 * @return void
-	 */
-	public function render_upgrade_notice( $context = '' ) {
-		// @todo Echo a contextual upgrade nudge if Pro is not active.
-	}
-
-	/**
-	 * Fire `ptai_pro_*` action hooks the Pro plugin can attach to.
-	 *
-	 * @return void
-	 */
-	public function fire_pro_hooks() {
-		// @todo do_action( 'ptai_pro_init', $this ).
+	public function get_purchase_url() {
+		return self::PURCHASE_URL;
 	}
 }

@@ -56,6 +56,9 @@ class PTAI_Public {
 	 * @return void
 	 */
 	public function handle_search_ajax() {
-		// @todo Verify nonce, call PTAI_Search->search(), wp_send_json_success().
+		// @todo MUST verify nonce via check_ajax_referer() before any work.
+		// @todo Rate-limit consideration: throttle per IP / user via a transient bucket
+		//       to prevent abuse of the AI search path (which proxies to OpenAI).
+		// @todo Call PTAI_Search->search( $query, $args ); wp_send_json_success( $results ).
 	}
 }

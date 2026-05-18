@@ -50,11 +50,17 @@ class PTAI_Search {
 	/**
 	 * AI-powered semantic search using stored embeddings.
 	 *
+	 * Falls back silently to core_search() when AI is not configured —
+	 * no errors, no Pro walls, just graceful degradation.
+	 *
 	 * @param string $query Search query.
 	 * @param array  $args  Additional args.
 	 * @return array
 	 */
 	public function ai_search( $query, $args = array() ) {
+		if ( ! PTAI_Settings::is_ai_enabled() ) {
+			return $this->core_search( $query, $args );
+		}
 		// @todo Embed query, score against stored embeddings, sort, return top N.
 		return array();
 	}
@@ -66,7 +72,7 @@ class PTAI_Search {
 	 * @param array $vec_b Vector B.
 	 * @return float
 	 */
-	public function similarity_score( $vec_a, $vec_b ) {
+	public function cosine_similarity( array $vec_a, array $vec_b ) {
 		// @todo Implement cosine similarity.
 		return 0.0;
 	}

@@ -60,7 +60,8 @@ class PTAI_Admin {
 	 * @return void
 	 */
 	public function save_meta_box( $post_id ) {
-		// @todo Verify nonce, capability, then update_post_meta().
+		// @todo MUST verify nonce via wp_verify_nonce() and capability via current_user_can( 'edit_post', $post_id ).
+		// @todo Skip on DOING_AUTOSAVE / revisions before any write.
 		unset( $post_id );
 	}
 
@@ -96,5 +97,17 @@ class PTAI_Admin {
 	public function add_plugin_action_links( $links ) {
 		// @todo Prepend a Settings link.
 		return $links;
+	}
+
+	/**
+	 * Render the plugin settings page.
+	 *
+	 * Wraps PTAI_Settings::settings_page_html() and renders the
+	 * passive upgrade sidebar from PTAI_Pro alongside it.
+	 *
+	 * @return void
+	 */
+	public function render_settings_page() {
+		// @todo Render two-column layout: settings form + PTAI_Pro::render_upgrade_sidebar().
 	}
 }

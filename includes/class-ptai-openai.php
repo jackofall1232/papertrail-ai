@@ -70,7 +70,7 @@ class PTAI_OpenAI {
 	 * @param int    $max_tokens Max output tokens.
 	 * @return array|WP_Error Response data or error.
 	 */
-	public function chat_completion( $messages, $model = self::DEFAULT_CHAT_MODEL, $max_tokens = 512 ) {
+	public function chat_completion( $messages, $model = 'gpt-4o-mini', $max_tokens = 500 ) {
 		// @todo POST to /chat/completions and return the parsed response.
 		return new WP_Error( 'ptai_not_implemented', __( 'Not implemented.', 'papertrail-ai' ) );
 	}

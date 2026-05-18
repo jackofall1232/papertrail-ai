@@ -88,12 +88,15 @@ class PTAI_Settings {
 	}
 
 	/**
-	 * Check if AI features are enabled and configured.
+	 * Whether AI features are available.
+	 *
+	 * The sole criterion is: an OpenAI API key has been saved.
+	 * No Pro check. No license check. Key present = AI on.
 	 *
 	 * @return bool
 	 */
 	public static function is_ai_enabled() {
-		// @todo Check feature toggle AND that an API key is present.
+		// @todo Return true iff a non-empty `openai_api_key` is stored in PTAI settings.
 		return false;
 	}
 }

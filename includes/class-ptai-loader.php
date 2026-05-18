@@ -28,7 +28,7 @@ class PTAI_Loader {
 	 */
 	public function run() {
 		// @todo Register CPT and taxonomy hooks.
-		// @todo Call define_admin_hooks(), define_public_hooks(), define_api_hooks().
+		// @todo Call define_admin_hooks(), define_public_hooks(), define_ajax_hooks().
 	}
 
 	/**
@@ -50,11 +50,11 @@ class PTAI_Loader {
 	}
 
 	/**
-	 * Register REST / AJAX hooks.
+	 * Register AJAX hooks.
 	 *
 	 * @return void
 	 */
-	public function define_api_hooks() {
-		// @todo Register REST routes and AJAX endpoints.
+	public function define_ajax_hooks() {
+		// @todo Register wp_ajax_* / wp_ajax_nopriv_* handlers.
 	}
 }

@@ -2,9 +2,10 @@
 /**
  * PaperTrail AI uninstall routine.
  *
- * Runs when the plugin is deleted from the WordPress admin.
- * Respects the "delete data on uninstall" setting — if disabled,
- * the plugin will leave its data in place.
+ * Triggered when the plugin is deleted via the WordPress admin.
+ * Respects the standalone `ptai_delete_data_on_uninstall` option —
+ * if it is not set to a truthy value, this file exits without
+ * touching any data.
  *
  * @package PaperTrail_AI
  */
@@ -14,88 +15,87 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
-/**
- * Whether the user opted in to full data deletion.
- *
- * @return bool
- */
-function ptai_should_delete_data() {
-	$settings = get_option( 'ptai_settings', array() );
-
-	if ( is_array( $settings ) && ! empty( $settings['delete_data_on_uninstall'] ) ) {
-		return true;
-	}
-
-	return false;
-}
-
-if ( ! ptai_should_delete_data() ) {
+// Opt-in cleanup: leave user data alone unless explicitly enabled.
+if ( ! get_option( 'ptai_delete_data_on_uninstall' ) ) {
 	return;
 }
 
 global $wpdb;
 
 /*
- * Delete all ptai_file posts and their postmeta.
+ * 1. Delete all ptai_file posts (and their postmeta).
  */
-$post_ids = get_posts(
+$ptai_post_ids = get_posts(
 	array(
-		'post_type'      => 'ptai_file',
-		'post_status'    => 'any',
-		'numberposts'    => -1,
-		'fields'         => 'ids',
+		'post_type'        => 'ptai_file',
+		'post_status'      => 'any',
+		'numberposts'      => -1,
+		'fields'           => 'ids',
 		'suppress_filters' => true,
 	)
 );
 
-if ( ! empty( $post_ids ) ) {
-	foreach ( $post_ids as $post_id ) {
-		wp_delete_post( $post_id, true );
+if ( ! empty( $ptai_post_ids ) ) {
+	foreach ( $ptai_post_ids as $ptai_post_id ) {
+		wp_delete_post( $ptai_post_id, true );
 	}
 }
 
 /*
- * Delete plugin options.
+ * 2. Delete all ptai_category taxonomy terms.
  */
-$options_to_delete = array(
-	'ptai_settings',
-	'ptai_db_version',
-	'ptai_activated_at',
-	'ptai_flush_rewrite',
+$ptai_term_ids = get_terms(
+	array(
+		'taxonomy'   => 'ptai_category',
+		'hide_empty' => false,
+		'fields'     => 'ids',
+	)
 );
 
-foreach ( $options_to_delete as $option ) {
-	delete_option( $option );
-	delete_site_option( $option );
+if ( ! is_wp_error( $ptai_term_ids ) && ! empty( $ptai_term_ids ) ) {
+	foreach ( $ptai_term_ids as $ptai_term_id ) {
+		wp_delete_term( $ptai_term_id, 'ptai_category' );
+	}
 }
 
 /*
- * Delete any leftover embedding postmeta (defensive cleanup).
+ * 3. Defensive sweep: remove embedding postmeta from any post type
+ *    (in case files were converted or attached elsewhere).
  */
 $wpdb->query( "DELETE FROM {$wpdb->postmeta} WHERE meta_key LIKE '_ptai_embedding%'" );
 $wpdb->query( "DELETE FROM {$wpdb->postmeta} WHERE meta_key LIKE '_ptai_%'" );
 
 /*
- * Drop custom DB tables if any were added in future versions.
- *
- * @todo If a custom table is ever introduced (e.g. wp_ptai_embeddings)
- *       drop it here with $wpdb->query( "DROP TABLE IF EXISTS ..." ).
+ * 4. Delete plugin options.
  */
-$custom_tables = array(
-	// $wpdb->prefix . 'ptai_embeddings',
+$ptai_options = array(
+	'ptai_settings',
+	'ptai_db_version',
+	'ptai_activated_at',
+	'ptai_flush_rewrite',
+	'ptai_delete_data_on_uninstall',
 );
 
-foreach ( $custom_tables as $table ) {
-	$wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+foreach ( $ptai_options as $ptai_option ) {
+	delete_option( $ptai_option );
+	delete_site_option( $ptai_option );
 }
 
 /*
- * Clear scheduled cron events.
+ * 5. Custom DB tables.
+ *
+ * @todo If a future version introduces a custom table
+ *       (e.g. {$wpdb->prefix}ptai_embeddings), drop it here
+ *       with $wpdb->query( "DROP TABLE IF EXISTS ..." ).
+ */
+
+/*
+ * 6. Clear any scheduled cron events.
  */
 wp_clear_scheduled_hook( 'ptai_daily_maintenance' );
 wp_clear_scheduled_hook( 'ptai_regenerate_embeddings' );
 
 /*
- * Flush rewrite rules.
+ * 7. Flush rewrite rules.
  */
 flush_rewrite_rules();
