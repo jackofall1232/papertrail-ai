@@ -64,7 +64,12 @@ if ( ! is_wp_error( $ptai_term_ids ) && ! empty( $ptai_term_ids ) ) {
 /*
  * 3. Defensive sweep: remove any leftover plugin postmeta from
  *    any post type (in case files were converted or reattached).
+ *
+ * The table identifier ({$wpdb->postmeta}) cannot be parameterized via
+ * $wpdb->prepare() — it's an identifier, not a value. The LIKE pattern
+ * is a hard-coded literal.
  */
+// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 $wpdb->query( "DELETE FROM {$wpdb->postmeta} WHERE meta_key LIKE '_ptai_%'" );
 
 /*
@@ -76,6 +81,8 @@ $ptai_options = array(
 	'ptai_activated_at',
 	'ptai_flush_rewrite',
 	'ptai_delete_data_on_uninstall',
+	'ptai_openai_auth_failed',
+	'ptai_rewrite_version',
 );
 
 foreach ( $ptai_options as $ptai_option ) {
@@ -84,16 +91,40 @@ foreach ( $ptai_options as $ptai_option ) {
 }
 
 /*
+ * 4b. Delete plugin transients.
+ *
+ * The published-post-count cache has a single known key.
+ * Download and search rate-limit transients use ptai_dl_ / ptai_srch_
+ * prefixes — too many to enumerate, so wipe them by LIKE pattern.
+ * Table identifier and LIKE pattern are hard-coded literals; no values
+ * are interpolated from user input.
+ */
+delete_transient( 'ptai_post_count_cache' );
+
+// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+$wpdb->query(
+	"DELETE FROM {$wpdb->options}
+	 WHERE option_name LIKE '\_transient\_ptai\_dl\_%'
+		OR option_name LIKE '\_transient\_timeout\_ptai\_dl\_%'
+		OR option_name LIKE '\_transient\_ptai\_srch\_%'
+		OR option_name LIKE '\_transient\_timeout\_ptai\_srch\_%'"
+);
+
+/*
  * 5. Custom DB tables.
  *
- * @todo If a future version introduces a custom table
- *       (e.g. {$wpdb->prefix}ptai_embeddings), drop it here
- *       with $wpdb->query( "DROP TABLE IF EXISTS ..." ).
+ * Reserved: if a future version introduces a custom table
+ * (e.g. {$wpdb->prefix}ptai_embeddings), drop it here.
  */
 
 /*
  * 6. Clear any scheduled cron events.
+ *
+ * The active hook name must match PTAI_Embeddings::CRON_HOOK exactly.
+ * The legacy hook names below are cleared too in case earlier dev
+ * builds left orphan jobs in the schedule.
  */
+wp_clear_scheduled_hook( 'ptai_generate_embedding' );
 wp_clear_scheduled_hook( 'ptai_daily_maintenance' );
 wp_clear_scheduled_hook( 'ptai_regenerate_embeddings' );
 
