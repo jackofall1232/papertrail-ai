@@ -517,9 +517,78 @@ class PTAI_Admin {
 		}
 		?>
 		<div class="wrap ptai-settings-wrap">
-			<h1><?php esc_html_e( 'PaperTrail AI Settings', 'papertrail-ai' ); ?></h1>
+
+			<!-- Hero / branded header -->
+			<div class="ptai-admin-hero">
+				<div class="ptai-admin-hero__inner">
+					<div class="ptai-admin-hero__icon" aria-hidden="true">
+						<span class="dashicons dashicons-media-document"></span>
+					</div>
+					<div class="ptai-admin-hero__text">
+						<h1 class="ptai-admin-hero__title">
+							<?php esc_html_e( 'PaperTrail AI', 'papertrail-ai' ); ?>
+						</h1>
+						<p class="ptai-admin-hero__subtitle">
+							<?php esc_html_e(
+								'Smart Document Library — Part of the Ask Adam Suite',
+								'papertrail-ai'
+							); ?>
+						</p>
+					</div>
+					<div class="ptai-admin-hero__badge">
+						<span class="ptai-version-badge">
+							v<?php echo esc_html( PTAI_VERSION ); ?>
+						</span>
+					</div>
+				</div>
+			</div>
+
 			<?php settings_errors(); ?>
 
+			<!-- Tab navigation -->
+			<nav class="ptai-tab-nav" role="tablist"
+				aria-label="<?php esc_attr_e(
+					'Settings sections', 'papertrail-ai'
+				); ?>">
+				<button class="ptai-tab-btn ptai-tab-btn--active"
+						role="tab"
+						aria-selected="true"
+						aria-controls="ptai-tab-ai"
+						data-tab="ptai-tab-ai">
+					<span class="dashicons dashicons-superhero-alt"
+						aria-hidden="true"></span>
+					<?php esc_html_e( 'AI Configuration', 'papertrail-ai' ); ?>
+				</button>
+				<button class="ptai-tab-btn"
+						role="tab"
+						aria-selected="false"
+						aria-controls="ptai-tab-uploads"
+						data-tab="ptai-tab-uploads">
+					<span class="dashicons dashicons-upload"
+						aria-hidden="true"></span>
+					<?php esc_html_e( 'Upload Settings', 'papertrail-ai' ); ?>
+				</button>
+				<button class="ptai-tab-btn"
+						role="tab"
+						aria-selected="false"
+						aria-controls="ptai-tab-access"
+						data-tab="ptai-tab-access">
+					<span class="dashicons dashicons-groups"
+						aria-hidden="true"></span>
+					<?php esc_html_e( 'Access Control', 'papertrail-ai' ); ?>
+				</button>
+				<button class="ptai-tab-btn"
+						role="tab"
+						aria-selected="false"
+						aria-controls="ptai-tab-advanced"
+						data-tab="ptai-tab-advanced">
+					<span class="dashicons dashicons-admin-tools"
+						aria-hidden="true"></span>
+					<?php esc_html_e( 'Advanced', 'papertrail-ai' ); ?>
+				</button>
+			</nav>
+
+			<!-- Main layout -->
 			<div class="ptai-settings-layout">
 				<div class="ptai-settings-main">
 					<form method="post" action="options.php">
@@ -539,6 +608,7 @@ class PTAI_Admin {
 					?>
 				</div>
 			</div>
+
 		</div>
 		<?php
 	}

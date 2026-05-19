@@ -1,116 +1,498 @@
 /* =============================================================
  * PaperTrail AI — Admin Styles
+ * Part of the Ask Adam Suite — askadamit.com
  * =============================================================
  *
  * Table of contents:
- *   1. Layout
- *   2. Settings page
- *   3. Meta boxes
- *   4. Status badges
- *   5. Admin notices
- *   6. Admin columns
- *   7. Upgrade sidebar
+ *   1.  CSS custom properties
+ *   2.  Hero / branded header
+ *   3.  Version badge
+ *   4.  Tab navigation
+ *   5.  Tab panels
+ *   6.  Settings layout
+ *   7.  Settings form enhancements
+ *   8.  Meta boxes
+ *   9.  Status badges
+ *  10.  Admin notices
+ *  11.  Admin columns
+ *  12.  Upgrade sidebar
+ *  13.  Responsive
  * ============================================================= */
 
-/* 1. Layout
+/* 1. CSS Custom Properties
 ------------------------------------------------------------- */
-/* .ptai-settings-wrap is on the outer <div class="wrap"> which also
-   contains the page heading and admin notices. Flex layout must be
-   scoped to .ptai-settings-layout so those elements still stack. */
+.ptai-settings-wrap {
+    --ptai-teal:        #0d9488;
+    --ptai-teal-dark:   #0f766e;
+    --ptai-teal-darker: #134e4a;
+    --ptai-teal-light:  #ccfbf1;
+    --ptai-teal-mid:    #99f6e4;
+    --ptai-white:       #ffffff;
+    --ptai-text-dark:   #1e293b;
+    --ptai-text-mid:    #64748b;
+    --ptai-border:      #e2e8f0;
+    --ptai-bg:          #f8fafc;
+    --ptai-radius:      8px;
+    --ptai-radius-sm:   4px;
+    --ptai-shadow:      0 1px 3px rgba(0,0,0,0.08),
+                        0 1px 2px rgba(0,0,0,0.06);
+    --ptai-shadow-md:   0 4px 6px rgba(0,0,0,0.07),
+                        0 2px 4px rgba(0,0,0,0.06);
+}
+
+/* 2. Hero / Branded Header
+------------------------------------------------------------- */
+.ptai-admin-hero {
+    background: linear-gradient(
+        135deg,
+        var(--ptai-teal)        0%,
+        var(--ptai-teal-dark)   50%,
+        var(--ptai-teal-darker) 100%
+    );
+    border-radius: var(--ptai-radius);
+    margin-bottom: 0;
+    margin-top: 16px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Subtle watermark pattern */
+.ptai-admin-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(
+        circle at 80% 50%,
+        rgba(255,255,255,0.06) 0%,
+        transparent 60%
+    );
+    pointer-events: none;
+}
+
+.ptai-admin-hero__inner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 28px;
+    position: relative;
+    z-index: 1;
+}
+
+.ptai-admin-hero__icon {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ptai-admin-hero__icon .dashicons {
+    color: var(--ptai-white);
+    font-size: 26px;
+    width: 26px;
+    height: 26px;
+    line-height: 1;
+}
+
+.ptai-admin-hero__text {
+    flex: 1;
+    min-width: 0;
+}
+
+.ptai-admin-hero__title {
+    color: var(--ptai-white);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0 0 4px;
+    padding: 0;
+    /* Override WP's default h1 styles in .wrap */
+    border: none;
+}
+
+.ptai-admin-hero__subtitle {
+    color: rgba(255,255,255,0.82);
+    font-size: 13px;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.ptai-admin-hero__badge {
+    flex-shrink: 0;
+}
+
+/* 3. Version Badge
+------------------------------------------------------------- */
+.ptai-version-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    color: var(--ptai-white);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.28);
+}
+
+/* 4. Tab Navigation
+------------------------------------------------------------- */
+.ptai-tab-nav {
+    display: flex;
+    gap: 2px;
+    background: var(--ptai-border);
+    border-radius: 0 0 var(--ptai-radius) var(--ptai-radius);
+    padding: 4px 4px 0;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    /* Flush against the hero bottom */
+    margin-top: 0;
+    border: 1px solid var(--ptai-border);
+    border-top: none;
+}
+
+.ptai-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    border-radius: var(--ptai-radius-sm) var(--ptai-radius-sm) 0 0;
+    color: var(--ptai-text-mid);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 16px;
+    transition: color 0.15s ease, background 0.15s ease;
+    white-space: nowrap;
+    position: relative;
+    bottom: -1px;
+}
+
+.ptai-tab-btn .dashicons {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.ptai-tab-btn:hover {
+    color: var(--ptai-teal);
+    background: rgba(13,148,136,0.06);
+}
+
+.ptai-tab-btn--active,
+.ptai-tab-btn[aria-selected="true"] {
+    background: #fff;
+    color: var(--ptai-teal);
+    font-weight: 600;
+    border: 1px solid var(--ptai-border);
+    border-bottom-color: #fff;
+}
+
+/* Active indicator bar */
+.ptai-tab-btn--active::after,
+.ptai-tab-btn[aria-selected="true"]::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--ptai-teal);
+    border-radius: var(--ptai-radius-sm) var(--ptai-radius-sm) 0 0;
+}
+
+/* 5. Tab Panels
+------------------------------------------------------------- */
+.ptai-tab-panel {
+    display: none;
+}
+
+.ptai-tab-panel--active {
+    display: block;
+}
+
+/* No-JS fallback — show all panels if tabs unavailable */
+.ptai-no-js .ptai-tab-panel {
+    display: block;
+}
+.ptai-no-js .ptai-tab-nav {
+    display: none;
+}
+
+/* 6. Settings Layout
+------------------------------------------------------------- */
 .ptai-settings-layout {
     display: flex;
     gap: 24px;
     align-items: flex-start;
     flex-wrap: wrap;
-    margin-top: 20px;
-}
-.ptai-settings-layout .ptai-settings-main {
-    flex: 1 1 600px;
-    min-width: 320px;
-}
-.ptai-settings-layout .ptai-settings-sidebar {
-    flex: 0 1 320px;
-    min-width: 280px;
 }
 
-/* 2. Settings page
+.ptai-settings-layout .ptai-settings-main {
+    flex: 1 1 540px;
+    min-width: 300px;
+}
+
+.ptai-settings-layout .ptai-settings-main .form-table {
+    background: var(--ptai-white);
+    border: 1px solid var(--ptai-border);
+    border-radius: var(--ptai-radius);
+    box-shadow: var(--ptai-shadow);
+    overflow: hidden;
+}
+
+.ptai-settings-layout .ptai-settings-main .form-table th,
+.ptai-settings-layout .ptai-settings-main .form-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--ptai-border);
+}
+
+.ptai-settings-layout .ptai-settings-main .form-table tr:last-child th,
+.ptai-settings-layout .ptai-settings-main .form-table tr:last-child td {
+    border-bottom: none;
+}
+
+.ptai-settings-layout .ptai-settings-main .form-table th {
+    background: var(--ptai-bg);
+    font-weight: 600;
+    color: var(--ptai-text-dark);
+    width: 220px;
+}
+
+/* WP settings section headings */
+.ptai-settings-main h2 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ptai-teal-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 24px 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--ptai-teal-light);
+}
+
+.ptai-settings-layout .ptai-settings-sidebar {
+    flex: 0 1 300px;
+    min-width: 260px;
+}
+
+/* 7. Settings Form Enhancements
 ------------------------------------------------------------- */
-.ptai-role-option { display: block; }
+.ptai-role-option {
+    display: block;
+    margin-bottom: 4px;
+}
+
 .ptai-action-link-upgrade {
-    color: #2271b1;
+    color: var(--ptai-teal);
     font-weight: 600;
 }
 
-/* 3. Meta boxes
+/* Submit button area */
+.ptai-settings-main .submit {
+    padding: 16px 20px;
+    background: var(--ptai-bg);
+    border-top: 1px solid var(--ptai-border);
+    margin: 0;
+    border-radius: 0 0 var(--ptai-radius) var(--ptai-radius);
+}
+
+/* API key field — mask the value visually */
+input[name="ptai_settings[openai_api_key]"] {
+    font-family: monospace;
+    letter-spacing: 0.08em;
+}
+
+/* 8. Meta Boxes
 ------------------------------------------------------------- */
 .ptai-meta-description {
-    color: #646970;
+    color: var(--ptai-text-mid);
     font-style: italic;
     margin-bottom: 8px;
+    font-size: 13px;
 }
+
 .ptai-doc-summary-wrap { margin-top: 8px; }
+
 .ptai-char-counter {
     font-size: 12px;
-    color: #646970;
+    color: var(--ptai-text-mid);
     margin: 4px 0 0;
 }
+
 .ptai-char-counter--warning .ptai-char-count { color: #b45309; }
 .ptai-char-counter--over    .ptai-char-count {
     color: #b91c1c;
     font-weight: 700;
 }
+
 .ptai-ai-disabled-notice {
-    background: #f0f6fc;
-    border-left: 4px solid #72aee6;
+    background: var(--ptai-teal-light);
+    border-left: 4px solid var(--ptai-teal);
     padding: 8px 12px;
     margin-top: 8px;
     font-size: 13px;
+    border-radius: 0 var(--ptai-radius-sm) var(--ptai-radius-sm) 0;
 }
 
 .ptai-meta-list { margin: 0 0 0.75em 0; }
 .ptai-meta-list--flush { margin: 0; }
 
-/* 4. Status badges
+/* 9. Status Badges
 ------------------------------------------------------------- */
 .ptai-status-badge {
     display: inline-block;
     padding: 2px 8px;
-    border-radius: 3px;
+    border-radius: 20px;
     font-size: 11px;
     font-weight: 600;
     line-height: 1.6;
     vertical-align: middle;
+    letter-spacing: 0.02em;
 }
-.ptai-status-badge--current { background: #d1e7dd; color: #0f5132; }
-.ptai-status-badge--stale   { background: #fff3cd; color: #664d03; }
-.ptai-status-badge--missing { background: #f8d7da; color: #842029; }
 
-/* 5. Admin notices
+.ptai-status-badge--current {
+    background: #d1fae5;
+    color: #065f46;
+}
+.ptai-status-badge--stale {
+    background: #fef3c7;
+    color: #92400e;
+}
+.ptai-status-badge--missing {
+    background: #fee2e2;
+    color: #991b1b;
+}
+.ptai-status-badge--queued {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+/* 10. Admin Notices
 ------------------------------------------------------------- */
-/* WP native notice classes handle base styling.
-   Custom additions only below. */
+/* WP native notice classes handle base styling. */
+/* Teal tint on AI-active notice */
+.ptai-ai-active-notice.notice-success {
+    border-left-color: var(--ptai-teal);
+}
 
-/* 6. Admin columns
+/* 11. Admin Columns
 ------------------------------------------------------------- */
 .column-download_count,
-.column-last_downloaded { width: 120px; }
-.column-file_type       { width: 100px; }
+.column-last_downloaded { width: 130px; }
+.column-file_type       { width: 110px; }
 .column-file_size       { width: 90px;  }
 
-/* 7. Upgrade sidebar
+/* 12. Upgrade Sidebar
 ------------------------------------------------------------- */
 .ptai-upgrade-sidebar {
-    background: #fff;
-    border: 1px solid #c3c4c7;
-    padding: 16px;
+    background: var(--ptai-white);
+    border: 1px solid var(--ptai-border);
+    border-radius: var(--ptai-radius);
+    box-shadow: var(--ptai-shadow);
+    overflow: hidden;
 }
-.ptai-upgrade-sidebar h3 { margin-top: 0; }
-.ptai-upgrade-sidebar ul {
-    margin: 0 0 12px;
-    padding-left: 18px;
+
+/* Sidebar mini-hero */
+.ptai-upgrade-sidebar__title {
+    background: linear-gradient(
+        135deg,
+        var(--ptai-teal)      0%,
+        var(--ptai-teal-dark) 100%
+    );
+    color: var(--ptai-white) !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+    padding: 14px 16px !important;
+    letter-spacing: 0.02em;
 }
-.ptai-upgrade-sidebar .button {
-    width: 100%;
+
+.ptai-upgrade-sidebar__lead {
+    color: var(--ptai-text-mid);
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+    padding: 12px 16px 8px;
+}
+
+.ptai-upgrade-sidebar__features {
+    margin: 0;
+    padding: 8px 16px 12px 32px;
+    list-style: none;
+}
+
+.ptai-upgrade-sidebar__features li {
+    color: var(--ptai-text-dark);
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 4px 0;
+    position: relative;
+}
+
+/* Teal checkmark bullet */
+.ptai-upgrade-sidebar__features li::before {
+    content: '✓';
+    color: var(--ptai-teal);
+    font-weight: 700;
+    position: absolute;
+    left: -18px;
+}
+
+.ptai-upgrade-sidebar .button-primary {
+    background: var(--ptai-teal);
+    border-color: var(--ptai-teal-dark);
+    color: var(--ptai-white);
+    display: block;
+    margin: 4px 16px 16px;
     text-align: center;
+    width: calc(100% - 32px);
     box-sizing: border-box;
+    border-radius: var(--ptai-radius-sm);
+    font-weight: 600;
+}
+
+.ptai-upgrade-sidebar .button-primary:hover,
+.ptai-upgrade-sidebar .button-primary:focus {
+    background: var(--ptai-teal-dark);
+    border-color: var(--ptai-teal-darker);
+    color: var(--ptai-white);
+}
+
+/* 13. Responsive
+------------------------------------------------------------- */
+@media screen and ( max-width: 960px ) {
+    .ptai-settings-layout {
+        flex-direction: column;
+    }
+    .ptai-settings-layout .ptai-settings-sidebar {
+        width: 100%;
+        max-width: 100%;
+    }
+    .ptai-admin-hero__badge {
+        display: none;
+    }
+}
+
+@media screen and ( max-width: 600px ) {
+    .ptai-admin-hero__inner {
+        padding: 16px;
+        gap: 12px;
+    }
+    .ptai-admin-hero__title {
+        font-size: 18px;
+    }
+    .ptai-tab-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    .ptai-tab-btn .dashicons {
+        display: none;
+    }
 }

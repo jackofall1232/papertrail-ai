@@ -99,4 +99,68 @@
 		}
 	);
 
+	/* 4. Settings page tabs
+	--------------------------------------------------------- */
+	$( function () {
+		var $tabNav = $( '.ptai-tab-nav' );
+		var $form   = $( '.ptai-settings-main form' );
+		if ( ! $tabNav.length || ! $form.length ) {
+			return;
+		}
+
+		// Tab order matches the order of add_settings_section() calls
+		// in PTAI_Settings::register_settings().
+		var tabIds = [
+			'ptai-tab-ai',
+			'ptai-tab-uploads',
+			'ptai-tab-access',
+			'ptai-tab-advanced'
+		];
+
+		var $headings = $form.children( 'h2' );
+		if ( ! $headings.length ) {
+			return;
+		}
+
+		// Wrap each section heading + its following siblings (up to the
+		// next h2 or the .submit row) into a tab panel. The .submit row
+		// is intentionally left outside, so save stays visible.
+		$headings.each( function ( i ) {
+			var $h     = $( this );
+			var tabId  = tabIds[ i ] || ( 'ptai-tab-' + i );
+			var $group = $h.nextUntil( 'h2, .submit' );
+			var $panel = $( '<div></div>' )
+				.attr( 'id', tabId )
+				.attr( 'role', 'tabpanel' )
+				.addClass( 'ptai-tab-panel' );
+
+			$h.before( $panel );
+			$panel.append( $h ).append( $group );
+
+			if ( 0 === i ) {
+				$panel.addClass( 'ptai-tab-panel--active' );
+			}
+		} );
+
+		$tabNav.on( 'click', '.ptai-tab-btn', function ( e ) {
+			e.preventDefault();
+			var $btn   = $( this );
+			var target = $btn.data( 'tab' );
+			if ( ! target ) {
+				return;
+			}
+
+			$tabNav.find( '.ptai-tab-btn' )
+				.removeClass( 'ptai-tab-btn--active' )
+				.attr( 'aria-selected', 'false' );
+			$btn.addClass( 'ptai-tab-btn--active' )
+				.attr( 'aria-selected', 'true' );
+
+			$form.find( '.ptai-tab-panel' )
+				.removeClass( 'ptai-tab-panel--active' );
+			$form.find( '#' + target )
+				.addClass( 'ptai-tab-panel--active' );
+		} );
+	} );
+
 } ( jQuery, window.ptaiAdmin || {} ) );
