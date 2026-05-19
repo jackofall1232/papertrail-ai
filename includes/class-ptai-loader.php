@@ -111,6 +111,15 @@ class PTAI_Loader {
 		add_action( 'before_delete_post', array( $this->embeddings, 'on_delete_post' ) );
 		add_action( PTAI_Embeddings::CRON_HOOK, array( $this->embeddings, 'process_embedding_job' ) );
 
+		// Mirror the delete-on-uninstall flag to a standalone option that
+		// uninstall.php can read without bootstrapping plugin classes.
+		// Hooking the option-change actions (rather than embedding the
+		// mirror inside sanitize_settings) ensures the mirror tracks the
+		// actually-stored value on every update path, including early
+		// returns to defaults on malformed input.
+		add_action( 'add_option_' . PTAI_Settings::OPTION_NAME, array( $this->settings, 'sync_uninstall_flag' ) );
+		add_action( 'update_option_' . PTAI_Settings::OPTION_NAME, array( $this->settings, 'sync_uninstall_flag' ) );
+
 		// Shortcode.
 		add_shortcode( PTAI_Shortcode::TAG, array( $this->shortcode, 'render' ) );
 
