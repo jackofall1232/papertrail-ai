@@ -44,6 +44,11 @@ class PTAI_Admin {
 		add_action( 'pre_get_posts', array( $this, 'handle_sortable_columns_query' ) );
 
 		add_filter( 'plugin_action_links_' . PTAI_PLUGIN_BASENAME, array( $this, 'add_plugin_action_links' ) );
+
+		add_action( 'admin_notices', array( $this, 'render_ai_status_notice' ) );
+		add_filter( 'post_row_actions', array( $this, 'add_row_actions' ), 10, 2 );
+		add_action( 'admin_post_ptai_regenerate_embedding', array( $this, 'handle_regenerate_embedding' ) );
+		add_action( 'wp_ajax_ptai_dismiss_ai_notice', array( $this, 'handle_dismiss_ai_notice' ) );
 	}
 
 	/**
@@ -157,6 +162,15 @@ class PTAI_Admin {
 		);
 
 		add_meta_box(
+			'ptai_doc_summary_box',
+			__( 'AI Search Summary', 'papertrail-ai' ),
+			array( $this, 'render_doc_summary_meta_box' ),
+			PTAI_CPT,
+			'normal',
+			'high'
+		);
+
+		add_meta_box(
 			'ptai_upgrade_sidebar',
 			__( 'Ask Adam Pro', 'papertrail-ai' ),
 			array( $this, 'render_upgrade_meta_box' ),
@@ -164,6 +178,43 @@ class PTAI_Admin {
 			'side',
 			'low'
 		);
+	}
+
+	/**
+	 * Render the AI search summary meta box.
+	 *
+	 * @param WP_Post $post Current post.
+	 * @return void
+	 */
+	public function render_doc_summary_meta_box( $post ) {
+		$summary  = (string) get_post_meta( $post->ID, '_ptai_doc_summary', true );
+		$settings = new PTAI_Settings();
+		$ai_on    = $settings->is_ai_enabled();
+
+		wp_nonce_field( 'ptai_save_doc_summary', 'ptai_doc_summary_nonce' );
+		?>
+		<p class="ptai-meta-description">
+			<?php esc_html_e( 'Used by AI search to understand this document. Write 1-3 sentences describing the content, date, and topic. The more specific, the better the search results.', 'papertrail-ai' ); ?>
+		</p>
+		<div class="ptai-doc-summary-wrap">
+			<textarea
+				id="ptai_doc_summary"
+				name="_ptai_doc_summary"
+				class="large-text"
+				rows="4"
+				maxlength="500"
+			><?php echo esc_textarea( $summary ); ?></textarea>
+			<p class="ptai-char-counter">
+				<span class="ptai-char-count">0</span> / 500
+				<?php esc_html_e( 'characters', 'papertrail-ai' ); ?>
+			</p>
+		</div>
+		<?php if ( ! $ai_on ) : ?>
+			<p class="ptai-ai-disabled-notice">
+				<?php esc_html_e( 'Add your OpenAI API key in Settings to enable AI search.', 'papertrail-ai' ); ?>
+			</p>
+		<?php endif; ?>
+		<?php
 	}
 
 	/**
@@ -197,7 +248,7 @@ class PTAI_Admin {
 			echo '<p><span class="dashicons ' . esc_attr( $icon ) . '" aria-hidden="true"></span> ';
 			echo '<strong>' . esc_html( $file_name ) . '</strong></p>';
 
-			echo '<ul style="margin:0 0 0.75em 0;">';
+			echo '<ul class="ptai-meta-list">';
 			if ( $file_ext ) {
 				echo '<li>' . esc_html(
 					sprintf(
@@ -245,7 +296,7 @@ class PTAI_Admin {
 
 		echo '<hr />';
 		echo '<p><strong>' . esc_html__( 'Download statistics', 'papertrail-ai' ) . '</strong></p>';
-		echo '<ul style="margin:0;">';
+		echo '<ul class="ptai-meta-list ptai-meta-list--flush">';
 		echo '<li>' . esc_html(
 			sprintf(
 				/* translators: %d: number of downloads. */
@@ -292,6 +343,8 @@ class PTAI_Admin {
 		if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
 			return;
 		}
+
+		$this->save_doc_summary( $post_id );
 
 		if ( ! isset( $_POST['ptai_file_meta_nonce'] ) ) {
 			return;
@@ -467,7 +520,7 @@ class PTAI_Admin {
 				esc_html__( 'Settings', 'papertrail-ai' )
 			),
 			'upgrade'  => sprintf(
-				'<a href="%1$s" target="_blank" rel="noopener noreferrer" style="color:#2271b1;font-weight:600;">%2$s</a>',
+				'<a href="%1$s" class="ptai-action-link-upgrade" target="_blank" rel="noopener noreferrer">%2$s</a>',
 				esc_url( 'https://askadamit.com/purchase' ),
 				esc_html__( 'Upgrade to Pro', 'papertrail-ai' )
 			),
@@ -490,8 +543,8 @@ class PTAI_Admin {
 			<h1><?php esc_html_e( 'PaperTrail AI Settings', 'papertrail-ai' ); ?></h1>
 			<?php settings_errors(); ?>
 
-			<div class="ptai-settings-layout" style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
-				<div class="ptai-settings-main" style="flex:1 1 600px;min-width:320px;">
+			<div class="ptai-settings-layout">
+				<div class="ptai-settings-main">
 					<form method="post" action="options.php">
 						<?php
 						settings_fields( PTAI_Settings::SETTINGS_GROUP );
@@ -500,7 +553,7 @@ class PTAI_Admin {
 						?>
 					</form>
 				</div>
-				<div class="ptai-settings-sidebar" style="flex:0 1 320px;min-width:280px;">
+				<div class="ptai-settings-sidebar">
 					<?php
 					if ( class_exists( 'PTAI_Pro' ) ) {
 						$pro = new PTAI_Pro();
@@ -543,5 +596,240 @@ class PTAI_Admin {
 			return 'dashicons-media-interactive';
 		}
 		return 'dashicons-media-default';
+	}
+
+	/**
+	 * Persist the AI search summary field.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return void
+	 */
+	private function save_doc_summary( $post_id ) {
+		if ( ! isset( $_POST['ptai_doc_summary_nonce'] ) ) {
+			return;
+		}
+		if ( ! wp_verify_nonce(
+			sanitize_key( wp_unslash( $_POST['ptai_doc_summary_nonce'] ) ),
+			'ptai_save_doc_summary'
+		) ) {
+			return;
+		}
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+
+		$raw     = isset( $_POST['_ptai_doc_summary'] ) ? wp_unslash( $_POST['_ptai_doc_summary'] ) : '';
+		$summary = sanitize_textarea_field( (string) $raw );
+		$summary = substr( $summary, 0, 500 );
+
+		update_post_meta( $post_id, '_ptai_doc_summary', $summary );
+	}
+
+	/**
+	 * Render the AI status admin notice on PaperTrail screens.
+	 *
+	 * @return void
+	 */
+	public function render_ai_status_notice() {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || PTAI_CPT !== $screen->post_type ) {
+			return;
+		}
+
+		$settings     = new PTAI_Settings();
+		$settings_url = admin_url( 'edit.php?post_type=' . PTAI_CPT . '&page=' . self::SETTINGS_PAGE_SLUG );
+
+		// Regeneration result feedback (must precede other notices).
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$regen      = isset( $_GET['ptai_regen'] ) ? sanitize_key( wp_unslash( $_GET['ptai_regen'] ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$regen_post = isset( $_GET['post_id'] ) ? absint( wp_unslash( $_GET['post_id'] ) ) : 0;
+
+		if ( 'success' === $regen && $regen_post > 0 ) {
+			echo '<div class="notice notice-success is-dismissible"><p>'
+				. esc_html__( 'Embedding regenerated successfully.', 'papertrail-ai' )
+				. '</p></div>';
+		} elseif ( 'failed' === $regen && $regen_post > 0 ) {
+			printf(
+				'<div class="notice notice-error is-dismissible"><p>%s</p></div>',
+				wp_kses(
+					sprintf(
+						/* translators: %s: settings page URL */
+						__(
+							'Embedding regeneration failed. <a href="%s">Check your OpenAI API key in Settings</a>.',
+							'papertrail-ai'
+						),
+						esc_url( $settings_url )
+					),
+					array( 'a' => array( 'href' => array() ) )
+				)
+			);
+		}
+
+		// State 1 — circuit breaker.
+		if ( get_option( 'ptai_openai_auth_failed' ) ) {
+			?>
+			<div class="notice notice-error">
+				<p>
+					<?php
+					printf(
+						wp_kses(
+							/* translators: %s: settings page URL */
+							__(
+								'PaperTrail AI: Your OpenAI API key was rejected (401). AI search is disabled. <a href="%s">Update your API key</a> to re-enable.',
+								'papertrail-ai'
+							),
+							array( 'a' => array( 'href' => array() ) )
+						),
+						esc_url( $settings_url )
+					);
+					?>
+				</p>
+			</div>
+			<?php
+			return;
+		}
+
+		// State 2 — no key / AI disabled.
+		if ( ! $settings->is_ai_enabled() ) {
+			?>
+			<div class="notice notice-info">
+				<p>
+					<?php
+					printf(
+						wp_kses(
+							/* translators: %s: settings page URL */
+							__(
+								'PaperTrail AI is running in basic search mode. <a href="%s">Add your OpenAI API key</a> to enable AI-powered semantic search.',
+								'papertrail-ai'
+							),
+							array( 'a' => array( 'href' => array() ) )
+						),
+						esc_url( $settings_url )
+					);
+					?>
+				</p>
+			</div>
+			<?php
+			return;
+		}
+
+		// State 3 — AI active.
+		$dismissed_key = 'ptai_ai_notice_dismissed_' . get_current_user_id();
+		if ( get_user_meta( get_current_user_id(), $dismissed_key, true ) ) {
+			return;
+		}
+		?>
+		<div class="notice notice-success is-dismissible ptai-ai-active-notice"
+			data-nonce="<?php echo esc_attr( wp_create_nonce( 'ptai_dismiss_notice' ) ); ?>">
+			<p><?php esc_html_e( 'PaperTrail AI: AI search is active.', 'papertrail-ai' ); ?></p>
+		</div>
+		<?php
+	}
+
+	/**
+	 * AJAX: persist per-user dismissal of the "AI active" notice.
+	 *
+	 * @return void
+	 */
+	public function handle_dismiss_ai_notice() {
+		check_ajax_referer( 'ptai_dismiss_notice', 'nonce' );
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
+		}
+
+		$key = 'ptai_ai_notice_dismissed_' . get_current_user_id();
+		update_user_meta( get_current_user_id(), $key, true );
+
+		wp_send_json_success();
+		wp_die();
+	}
+
+	/**
+	 * Add embedding status badge and regenerate link to row actions.
+	 *
+	 * @param array   $actions Existing row actions.
+	 * @param WP_Post $post    Current post.
+	 * @return array
+	 */
+	public function add_row_actions( $actions, $post ) {
+		if ( PTAI_CPT !== $post->post_type ) {
+			return $actions;
+		}
+
+		$embeddings = new PTAI_Embeddings();
+		$status     = $embeddings->get_embedding_status( $post->ID );
+		$settings   = new PTAI_Settings();
+
+		$badge_labels = array(
+			'current' => __( 'Embedding current', 'papertrail-ai' ),
+			'stale'   => __( 'Embedding stale', 'papertrail-ai' ),
+			'missing' => __( 'No embedding', 'papertrail-ai' ),
+		);
+
+		if ( 'disabled' !== $status ) {
+			$label                  = isset( $badge_labels[ $status ] ) ? $badge_labels[ $status ] : '';
+			$actions['ptai_status'] = sprintf(
+				'<span class="ptai-status-badge ptai-status-badge--%s">%s</span>',
+				esc_attr( $status ),
+				esc_html( $label )
+			);
+		}
+
+		if ( $settings->is_ai_enabled() && 'disabled' !== $status ) {
+			$regen_url = wp_nonce_url(
+				admin_url(
+					'admin-post.php?action=ptai_regenerate_embedding&post_id=' . absint( $post->ID )
+				),
+				'ptai_regenerate_' . $post->ID
+			);
+			$actions['ptai_regenerate'] = sprintf(
+				'<a href="%s">%s</a>',
+				esc_url( $regen_url ),
+				esc_html__( 'Regenerate Embedding', 'papertrail-ai' )
+			);
+		}
+
+		return $actions;
+	}
+
+	/**
+	 * Handle the row-action regenerate request.
+	 *
+	 * @return void
+	 */
+	public function handle_regenerate_embedding() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$post_id = isset( $_GET['post_id'] ) ? absint( wp_unslash( $_GET['post_id'] ) ) : 0;
+		if ( $post_id < 1 ) {
+			wp_die( esc_html__( 'Invalid post.', 'papertrail-ai' ) );
+		}
+
+		check_admin_referer( 'ptai_regenerate_' . $post_id );
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_die( esc_html__( 'You do not have permission to do that.', 'papertrail-ai' ) );
+		}
+
+		$post = get_post( $post_id );
+		if ( ! $post || PTAI_CPT !== $post->post_type ) {
+			wp_die( esc_html__( 'Invalid post.', 'papertrail-ai' ) );
+		}
+
+		$embeddings = new PTAI_Embeddings();
+		$result     = $embeddings->generate_embedding( $post_id );
+
+		$redirect = add_query_arg(
+			array(
+				'post_type'  => PTAI_CPT,
+				'ptai_regen' => $result ? 'success' : 'failed',
+				'post_id'    => $post_id,
+			),
+			admin_url( 'edit.php' )
+		);
+
+		wp_safe_redirect( $redirect );
+		exit;
 	}
 }

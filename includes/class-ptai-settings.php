@@ -273,7 +273,7 @@ class PTAI_Settings {
 		echo '<fieldset>';
 		foreach ( $roles as $role_key => $role ) {
 			printf(
-				'<label style="display:block;"><input type="checkbox" name="%1$s[allowed_roles][]" value="%2$s" %3$s /> %4$s</label>',
+				'<label class="ptai-role-option"><input type="checkbox" name="%1$s[allowed_roles][]" value="%2$s" %3$s /> %4$s</label>',
 				esc_attr( self::OPTION_NAME ),
 				esc_attr( $role_key ),
 				checked( in_array( $role_key, $selected, true ), true, false ),
@@ -384,6 +384,10 @@ class PTAI_Settings {
 			add_settings_error( self::OPTION_NAME, 'ptai_empty_roles', __( 'At least one role must be allowed. Reset to administrator only.', 'papertrail-ai' ), 'updated' );
 		}
 		$sanitized['allowed_roles'] = array_values( array_unique( $roles ) );
+
+		// Re-saving settings clears the OpenAI auth-failure circuit breaker
+		// so a corrected key can be tried again without manual intervention.
+		delete_option( 'ptai_openai_auth_failed' );
 
 		return $sanitized;
 	}
@@ -514,7 +518,8 @@ class PTAI_Settings {
 				'png'     => 'image/png',
 				'gif'     => 'image/gif',
 				'webp'    => 'image/webp',
-				'svg'     => 'image/svg+xml',
+				// SVG intentionally excluded — stored XSS vector.
+				// SVG support requires dedicated sanitization — available in Pro.
 			),
 			'video'     => array(
 				'mp4'  => 'video/mp4',

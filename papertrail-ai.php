@@ -158,6 +158,9 @@ function ptai_bootstrap() {
 	if ( class_exists( 'PTAI_CPT' ) ) {
 		new PTAI_CPT();
 	}
+	if ( class_exists( 'PTAI_Embeddings' ) ) {
+		new PTAI_Embeddings();
+	}
 	if ( is_admin() ) {
 		if ( class_exists( 'PTAI_Settings' ) ) {
 			new PTAI_Settings();
@@ -239,9 +242,23 @@ function ptai_handle_download( WP_REST_Request $request ) {
 		return new WP_Error( 'ptai_file_missing', __( 'Attached file URL is unavailable.', 'papertrail-ai' ), array( 'status' => 404 ) );
 	}
 
-	$count = (int) get_post_meta( $post_id, '_ptai_download_count', true );
-	update_post_meta( $post_id, '_ptai_download_count', $count + 1 );
-	update_post_meta( $post_id, '_ptai_last_downloaded', current_time( 'mysql' ) );
+	// Rate limiting — prevent counter inflation.
+	// Token is hashed from post ID + hour window + server salt.
+	// No IP addresses or user identifiers stored. GDPR friendly.
+	$window        = current_time( 'Y-m-d-H' );
+	$salt          = wp_salt( 'auth' );
+	$token         = hash( 'sha256', (string) $post_id . $window . $salt );
+	$transient_key = 'ptai_dl_' . substr( $token, 0, 40 );
+
+	if ( ! get_transient( $transient_key ) ) {
+		// First hit in this hour window — count it.
+		set_transient( $transient_key, 1, HOUR_IN_SECONDS );
+		$count = absint( get_post_meta( $post_id, '_ptai_download_count', true ) );
+		update_post_meta( $post_id, '_ptai_download_count', $count + 1 );
+		update_post_meta( $post_id, '_ptai_last_downloaded', current_time( 'mysql' ) );
+	}
+	// File is always served regardless of rate limit state.
+	// Counter accuracy is best-effort. Users always get their download.
 
 	// Bypass the REST JSON envelope: emit a true HTTP redirect.
 	// wp_safe_redirect() restricts to allowed hosts; the attachment URL is
