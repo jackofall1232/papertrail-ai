@@ -114,11 +114,40 @@ class PTAI_Shortcode {
 		ob_start();
 
 		if ( $show_search ) {
-			echo $this->render_search_bar( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				array(
-					'category_id' => $category_id,
-					'mode'        => $mode,
-				)
+			// Explicit allowlist covers every tag/attribute used in search-bar.php.
+			// wp_kses_post() would strip <form>/<input>/<button>, breaking the UI.
+			$allowed_html = array(
+				'form'  => array(
+					'class'  => true,
+					'method' => true,
+					'action' => true,
+					'role'   => true,
+				),
+				'label' => array(
+					'for'   => true,
+					'class' => true,
+				),
+				'input' => array(
+					'type'        => true,
+					'id'          => true,
+					'name'        => true,
+					'class'       => true,
+					'value'       => true,
+					'placeholder' => true,
+				),
+				'button' => array(
+					'type'  => true,
+					'class' => true,
+				),
+			);
+			echo wp_kses(
+				$this->render_search_bar(
+					array(
+						'category_id' => absint( $category_id ),
+						'mode'        => sanitize_key( $mode ),
+					)
+				),
+				$allowed_html
 			);
 		}
 

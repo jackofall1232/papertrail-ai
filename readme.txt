@@ -2,7 +2,7 @@
 Contributors: askadamit
 Tags: document library, file manager, AI search, PDF, OpenAI
 Requires at least: 6.0
-Tested up to: 6.7
+Tested up to: 6.9
 Requires PHP: 7.4
 Stable tag: 1.0.1
 License: GPLv2 or later

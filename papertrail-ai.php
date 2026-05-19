@@ -1,13 +1,13 @@
 <?php
 /**
  * Plugin Name:       PaperTrail AI — Smart Document Library
- * Plugin URI:        https://example.com/papertrail-ai
+ * Plugin URI:        https://github.com/jackofall1232/papertrail-ai
  * Description:       AI-powered document library for WordPress. Upload, organize, and semantically search files using OpenAI embeddings.
  * Version:           1.0.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
- * Author:            Ask Adam
- * Author URI:        https://example.com
+ * Author:            jackofall1232
+ * Author URI:        https://github.com/jackofall1232
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       papertrail-ai
@@ -146,12 +146,11 @@ function ptai_bootstrap() {
 
 	ptai_load_files();
 
-	load_plugin_textdomain(
-		'papertrail-ai',
-		false,
-		dirname( PTAI_PLUGIN_BASENAME ) . '/languages'
-	);
-
+	// Translation loading is handled automatically by WordPress for plugins
+	// hosted on WordPress.org (since WP 4.6). The Text Domain and Domain Path
+	// headers in the plugin file header are sufficient. Calling
+	// load_plugin_textdomain() here is explicitly discouraged by Plugin Check
+	// and is intentionally omitted.
 	$loader = new PTAI_Loader();
 	$loader->run();
 }
