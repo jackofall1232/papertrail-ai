@@ -134,6 +134,10 @@ register_deactivation_hook( __FILE__, 'ptai_deactivate' );
 
 /**
  * Bootstrap the plugin.
+ *
+ * PTAI_Loader is the single source of truth for all hook registration.
+ * This function does the bare minimum: environment gate, file loading,
+ * text domain, and one loader instantiation.
  */
 function ptai_bootstrap() {
 	if ( ! ptai_check_environment() ) {
@@ -148,36 +152,8 @@ function ptai_bootstrap() {
 		dirname( PTAI_PLUGIN_BASENAME ) . '/languages'
 	);
 
-	if ( class_exists( 'PTAI_Loader' ) ) {
-		$loader = new PTAI_Loader();
-		$loader->run();
-	}
-
-	// Self-register subsystems whose loader wiring is not yet implemented.
-	// These classes self-wire their hooks in their own constructors.
-	if ( class_exists( 'PTAI_CPT' ) ) {
-		new PTAI_CPT();
-	}
-	if ( class_exists( 'PTAI_Embeddings' ) ) {
-		$ptai_embeddings = new PTAI_Embeddings();
-		$ptai_embeddings->init();
-	}
-	if ( class_exists( 'PTAI_Shortcode' ) ) {
-		new PTAI_Shortcode();
-	}
-	if ( class_exists( 'PTAI_Public' ) ) {
-		// Instantiated on every request — registers both frontend
-		// enqueue/template hooks AND admin-ajax search handlers.
-		new PTAI_Public();
-	}
-	if ( is_admin() ) {
-		if ( class_exists( 'PTAI_Settings' ) ) {
-			new PTAI_Settings();
-		}
-		if ( class_exists( 'PTAI_Admin' ) ) {
-			new PTAI_Admin();
-		}
-	}
+	$loader = new PTAI_Loader();
+	$loader->run();
 }
 add_action( 'plugins_loaded', 'ptai_bootstrap' );
 
@@ -298,7 +274,8 @@ function ptai_handle_download( WP_REST_Request $request ) {
 	// Rate limiting — prevent counter inflation.
 	// Token is hashed from post ID + hour window + server salt.
 	// No IP addresses or user identifiers stored. GDPR friendly.
-	$window        = current_time( 'Y-m-d-H' );
+	// gmdate() — timezone-agnostic hourly bucket for rate limiting.
+	$window        = gmdate( 'Y-m-d-H' );
 	$salt          = wp_salt( 'auth' );
 	$token         = hash( 'sha256', (string) $post_id . $window . $salt );
 	$transient_key = 'ptai_dl_' . substr( $token, 0, 40 );

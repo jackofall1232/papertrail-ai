@@ -21,16 +21,10 @@ class PTAI_Public {
 	const RATE_LIMIT_PER_HOUR = 60;
 
 	/**
-	 * Constructor — wires hooks directly.
+	 * Constructor. Intentionally side-effect-free — all hooks live in
+	 * PTAI_Loader::define_public_hooks() and define_ajax_hooks().
 	 */
-	public function __construct() {
-		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_styles' ) );
-		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
-		add_filter( 'template_include', array( $this, 'template_include' ) );
-
-		add_action( 'wp_ajax_ptai_search', array( $this, 'handle_search_ajax' ) );
-		add_action( 'wp_ajax_nopriv_ptai_search', array( $this, 'handle_search_ajax' ) );
-	}
+	public function __construct() {}
 
 	/**
 	 * Whether the current request should load the public assets.
@@ -174,7 +168,8 @@ class PTAI_Public {
 			return $mode;
 		}
 
-		$window = current_time( 'Y-m-d-H' );
+		// gmdate() — timezone-agnostic hourly bucket for rate limiting.
+		$window = gmdate( 'Y-m-d-H' );
 		$salt   = wp_salt( 'auth' );
 		$token  = hash( 'sha256', 'search' . $window . $salt );
 		$key    = 'ptai_srch_' . substr( $token, 0, 40 );

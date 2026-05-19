@@ -61,11 +61,10 @@ class PTAI_Settings {
 	}
 
 	/**
-	 * Constructor. Wires registration to `admin_init`.
+	 * Constructor. Intentionally side-effect-free — registration is hooked
+	 * in PTAI_Loader::define_admin_hooks().
 	 */
-	public function __construct() {
-		add_action( 'admin_init', array( $this, 'register_settings' ) );
-	}
+	public function __construct() {}
 
 	/**
 	 * Register settings, sections, and fields.

@@ -25,24 +25,14 @@ class PTAI_Embeddings {
 	const CRON_HOOK     = 'ptai_generate_embedding';
 
 	/**
-	 * Constructor. Intentionally side-effect-free so query helpers can
-	 * be invoked from row actions without registering duplicate hooks.
-	 * Call `init()` exactly once from the bootstrap.
+	 * Constructor. Intentionally side-effect-free — all hooks live in
+	 * PTAI_Loader::define_core_hooks().
+	 *
+	 * The save_post_* hook is wired at priority 20 there so that
+	 * PTAI_Admin::save_meta_box (priority 10) has already persisted
+	 * _ptai_doc_summary before this class reads it.
 	 */
 	public function __construct() {}
-
-	/**
-	 * Wire WordPress hooks. Call once during plugin bootstrap.
-	 *
-	 * @return void
-	 */
-	public function init() {
-		// Priority 20 so PTAI_Admin::save_meta_box (priority 10) has
-		// already persisted _ptai_doc_summary before we read it.
-		add_action( 'save_post_' . PTAI_CPT, array( $this, 'on_save_post' ), 20 );
-		add_action( 'before_delete_post', array( $this, 'on_delete_post' ) );
-		add_action( self::CRON_HOOK, array( $this, 'process_embedding_job' ) );
-	}
 
 	/**
 	 * Hook callback: queue an embedding regeneration after save.

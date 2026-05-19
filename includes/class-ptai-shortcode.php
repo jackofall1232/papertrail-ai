@@ -24,20 +24,10 @@ class PTAI_Shortcode {
 	const TAG = 'papertrail';
 
 	/**
-	 * Constructor. Wires the shortcode registration to `init`.
+	 * Constructor. Intentionally side-effect-free — the shortcode is
+	 * registered in PTAI_Loader::define_core_hooks().
 	 */
-	public function __construct() {
-		add_action( 'init', array( $this, 'register' ) );
-	}
-
-	/**
-	 * Register the shortcode with WordPress.
-	 *
-	 * @return void
-	 */
-	public function register() {
-		add_shortcode( self::TAG, array( $this, 'render' ) );
-	}
+	public function __construct() {}
 
 	/**
 	 * Default shortcode attribute values.

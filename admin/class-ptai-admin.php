@@ -23,37 +23,10 @@ class PTAI_Admin {
 	const SETTINGS_PAGE_SLUG = 'ptai-settings';
 
 	/**
-	 * Constructor. Wires admin hooks directly so the class is self-contained
-	 * regardless of how PTAI_Loader is wired.
-	 *
-	 * Note: PTAI_Settings is instantiated separately from the plugin
-	 * bootstrap. The settings page renders the form via the static
-	 * PTAI_Settings::SETTINGS_GROUP / PAGE_SLUG constants, so no
-	 * instance reference is needed here.
+	 * Constructor. Intentionally side-effect-free — all hooks live in
+	 * PTAI_Loader::define_admin_hooks().
 	 */
-	public function __construct() {
-		add_action( 'admin_menu', array( $this, 'register_settings_page' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_styles' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
-		add_action( 'add_meta_boxes_' . PTAI_CPT, array( $this, 'add_meta_boxes' ) );
-		add_action( 'save_post_' . PTAI_CPT, array( $this, 'save_meta_box' ) );
-
-		add_filter( 'manage_' . PTAI_CPT . '_posts_columns', array( $this, 'add_admin_columns' ) );
-		add_action( 'manage_' . PTAI_CPT . '_posts_custom_column', array( $this, 'populate_admin_column' ), 10, 2 );
-		add_filter( 'manage_edit-' . PTAI_CPT . '_sortable_columns', array( $this, 'make_admin_columns_sortable' ) );
-		add_action( 'pre_get_posts', array( $this, 'handle_sortable_columns_query' ) );
-
-		add_filter( 'plugin_action_links_' . PTAI_PLUGIN_BASENAME, array( $this, 'add_plugin_action_links' ) );
-
-		add_action( 'admin_notices', array( $this, 'render_ai_status_notice' ) );
-		add_action( 'admin_notices', array( $this, 'render_size_limit_notice' ) );
-		add_filter( 'post_row_actions', array( $this, 'add_row_actions' ), 10, 2 );
-		add_action( 'admin_post_ptai_regenerate_embedding', array( $this, 'handle_regenerate_embedding' ) );
-		add_action( 'wp_ajax_ptai_dismiss_ai_notice', array( $this, 'handle_dismiss_ai_notice' ) );
-
-		add_filter( 'bulk_actions-edit-' . PTAI_CPT, array( $this, 'add_bulk_actions' ) );
-		add_filter( 'handle_bulk_actions-edit-' . PTAI_CPT, array( $this, 'handle_bulk_action' ), 10, 3 );
-	}
+	public function __construct() {}
 
 	/**
 	 * Register the settings submenu under the Documents CPT.
