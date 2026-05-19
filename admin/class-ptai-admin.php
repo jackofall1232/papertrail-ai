@@ -823,12 +823,6 @@ class PTAI_Admin {
 						</span>
 						<?php esc_html_e( '— Not yet indexed. Save the document or use Regenerate Embedding.', 'papertrail-ai' ); ?>
 					</li>
-					<li>
-						<span class="ptai-status-badge ptai-status-badge--queued">
-							<?php esc_html_e( 'Embedding queued', 'papertrail-ai' ); ?>
-						</span>
-						<?php esc_html_e( '— Indexing scheduled. Will complete on next WP-Cron run (usually seconds).', 'papertrail-ai' ); ?>
-					</li>
 				</ul>
 				<p class="ptai-help__note">
 					<span class="dashicons dashicons-info-outline"

@@ -222,14 +222,17 @@
 
 /* 5. Tab Panels
 ------------------------------------------------------------- */
-/* Panels are wrapped by JS. Without JS no .ptai-tab-panel
-   elements exist, so all sections render flat — paired with the
-   hidden-by-default .ptai-tab-nav, this is the no-JS fallback. */
-.ptai-tab-panel {
+/* Form-section panels are wrapped by JS. Static panels (e.g. the
+   help tab) are server-rendered with .ptai-tab-panel. Both the
+   hide rule and the active rule are scoped to .ptai-tabs-ready so
+   that, when JS is absent or bails out, static panels stay visible
+   and the form sections render flat — paired with the hidden
+   .ptai-tab-nav, this is the no-JS fallback. */
+.ptai-tabs-ready .ptai-tab-panel {
     display: none;
 }
 
-.ptai-tab-panel--active {
+.ptai-tabs-ready .ptai-tab-panel--active {
     display: block;
 }
 
@@ -574,18 +577,18 @@ input[name="ptai_settings[openai_api_key]"] {
     overflow: hidden;
 }
 
-.ptai-help__heading {
+.ptai-help .ptai-help__heading {
     align-items: center;
     background: var(--ptai-bg);
     border-bottom: 1px solid var(--ptai-border);
-    color: var(--ptai-teal-dark) !important;
-    display: flex !important;
-    font-size: 13px !important;
-    font-weight: 700 !important;
+    color: var(--ptai-teal-dark);
+    display: flex;
+    font-size: 13px;
+    font-weight: 700;
     gap: 8px;
     letter-spacing: 0.04em;
-    margin: 0 !important;
-    padding: 12px 20px !important;
+    margin: 0;
+    padding: 12px 20px;
     text-transform: uppercase;
 }
 
@@ -664,11 +667,11 @@ input[name="ptai_settings[openai_api_key]"] {
     margin: 0;
 }
 
-.ptai-help__table {
+.ptai-help .ptai-help__table {
     border-collapse: collapse;
     font-size: 13px;
-    margin: 12px 20px 16px !important;
-    width: calc(100% - 40px) !important;
+    margin: 12px 20px 16px;
+    width: calc(100% - 40px);
 }
 
 .ptai-help__table th {
@@ -703,11 +706,11 @@ input[name="ptai_settings[openai_api_key]"] {
     padding-bottom: 16px;
 }
 
-.ptai-help__example-label {
+.ptai-help .ptai-help__example-label {
     color: var(--ptai-text-mid);
     font-size: 12px;
     font-weight: 600;
-    margin-bottom: 8px !important;
+    margin-bottom: 8px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -772,7 +775,7 @@ input[name="ptai_settings[openai_api_key]"] {
     margin-bottom: 0;
 }
 
-.ptai-help__note {
+.ptai-help .ptai-help__note {
     align-items: flex-start;
     background: var(--ptai-teal-light);
     border-radius: 0 0 var(--ptai-radius-sm)
@@ -781,8 +784,8 @@ input[name="ptai_settings[openai_api_key]"] {
     display: flex;
     font-size: 13px;
     gap: 8px;
-    margin: 0 !important;
-    padding: 12px 20px !important;
+    margin: 0;
+    padding: 12px 20px;
 }
 
 .ptai-help__note .dashicons {
@@ -802,7 +805,7 @@ input[name="ptai_settings[openai_api_key]"] {
         var(--ptai-teal-dark) 100%
     );
     border-bottom: none;
-    color: var(--ptai-white) !important;
+    color: var(--ptai-white);
 }
 
 .ptai-help__section--cta .ptai-help__heading .dashicons {
@@ -813,20 +816,20 @@ input[name="ptai_settings[openai_api_key]"] {
     padding-top: 16px;
 }
 
-.ptai-help__cta-btn {
-    margin: 8px 20px 20px 0 !important;
+.ptai-help .ptai-help__cta-btn {
+    margin: 8px 20px 20px 0;
 }
 
-.ptai-help__cta-btn.button-primary {
-    background: var(--ptai-teal) !important;
-    border-color: var(--ptai-teal-dark) !important;
-    color: var(--ptai-white) !important;
+.ptai-help .ptai-help__cta-btn.button-primary {
+    background: var(--ptai-teal);
+    border-color: var(--ptai-teal-dark);
+    color: var(--ptai-white);
 }
 
-.ptai-help__cta-btn.button-primary:hover,
-.ptai-help__cta-btn.button-primary:focus {
-    background: var(--ptai-teal-dark) !important;
-    border-color: var(--ptai-teal-darker) !important;
+.ptai-help .ptai-help__cta-btn.button-primary:hover,
+.ptai-help .ptai-help__cta-btn.button-primary:focus {
+    background: var(--ptai-teal-dark);
+    border-color: var(--ptai-teal-darker);
 }
 
 /* Responsive */
