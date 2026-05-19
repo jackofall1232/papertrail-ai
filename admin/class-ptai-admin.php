@@ -255,13 +255,13 @@ class PTAI_Admin {
 		echo '<li>' . esc_html(
 			sprintf(
 				/* translators: %d: number of downloads. */
-				_n( '%d download', '%d downloads', max( 1, $download_count ), 'papertrail-ai' ),
+				_n( '%d download', '%d downloads', $download_count, 'papertrail-ai' ),
 				$download_count
 			)
 		) . '</li>';
 		if ( '' !== $last_downloaded ) {
 			$timestamp = strtotime( $last_downloaded );
-			$display   = $timestamp ? date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $timestamp ) : $last_downloaded;
+			$display   = $timestamp ? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $timestamp ) : $last_downloaded;
 			echo '<li>' . esc_html(
 				sprintf(
 					/* translators: %s: formatted date/time. */
@@ -416,7 +416,7 @@ class PTAI_Admin {
 				}
 				$timestamp = strtotime( $last );
 				$format    = get_option( 'date_format' );
-				echo $timestamp ? esc_html( date_i18n( $format, $timestamp ) ) : esc_html( $last );
+				echo $timestamp ? esc_html( wp_date( $format, $timestamp ) ) : esc_html( $last );
 				break;
 		}
 	}

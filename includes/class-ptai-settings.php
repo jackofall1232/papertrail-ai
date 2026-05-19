@@ -192,10 +192,13 @@ class PTAI_Settings {
 	public function render_field_api_key() {
 		$stored = (string) self::get_option( 'openai_api_key', '' );
 		$masked = '' !== $stored ? str_repeat( '•', 8 ) . substr( $stored, -4 ) : '';
+		// Never render the raw key into HTML. The submit handler treats an
+		// empty submission as "keep the existing key".
+		$placeholder = '' !== $stored ? '••••••••••••' : 'sk-...';
 		printf(
-			'<input type="password" id="ptai_openai_api_key" name="%1$s[openai_api_key]" value="%2$s" autocomplete="new-password" class="regular-text" placeholder="sk-..." />',
+			'<input type="password" id="ptai_openai_api_key" name="%1$s[openai_api_key]" value="" autocomplete="new-password" class="regular-text" placeholder="%2$s" />',
 			esc_attr( self::OPTION_NAME ),
-			esc_attr( $stored )
+			esc_attr( $placeholder )
 		);
 		if ( '' !== $masked ) {
 			echo '<p class="description">' . esc_html(
@@ -337,16 +340,23 @@ class PTAI_Settings {
 		}
 
 		// API key — sanitize, then base64-encode for storage.
+		// An empty submission means "keep the existing key" so admins can
+		// re-save other settings without re-entering the key each time.
 		if ( array_key_exists( 'openai_api_key', $input ) ) {
-			$plain = $this->sanitize_api_key( $input['openai_api_key'] );
+			$raw_input = (string) $input['openai_api_key'];
+			$existing  = get_option( self::OPTION_NAME, array() );
+			$old_key   = is_array( $existing ) && isset( $existing['openai_api_key'] ) ? $existing['openai_api_key'] : '';
 
-			if ( '' === $plain && '' !== trim( (string) $input['openai_api_key'] ) ) {
-				add_settings_error( self::OPTION_NAME, 'ptai_bad_api_key', __( 'The OpenAI API key was not saved. Keys must begin with "sk-".', 'papertrail-ai' ) );
-				// Preserve previously-stored key if the new value was invalid.
-				$existing                       = get_option( self::OPTION_NAME, array() );
-				$sanitized['openai_api_key']    = is_array( $existing ) && isset( $existing['openai_api_key'] ) ? $existing['openai_api_key'] : '';
+			if ( '' === trim( $raw_input ) ) {
+				$sanitized['openai_api_key'] = $old_key;
 			} else {
-				$sanitized['openai_api_key'] = '' === $plain ? '' : base64_encode( $plain );
+				$plain = $this->sanitize_api_key( $raw_input );
+				if ( '' === $plain ) {
+					add_settings_error( self::OPTION_NAME, 'ptai_bad_api_key', __( 'The OpenAI API key was not saved. Keys must begin with "sk-".', 'papertrail-ai' ) );
+					$sanitized['openai_api_key'] = $old_key;
+				} else {
+					$sanitized['openai_api_key'] = base64_encode( $plain );
+				}
 			}
 		}
 
