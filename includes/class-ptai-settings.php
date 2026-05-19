@@ -367,6 +367,15 @@ class PTAI_Settings {
 		$sanitized['ai_enabled_override'] = ! empty( $input['ai_enabled_override'] );
 		$sanitized['delete_on_uninstall'] = ! empty( $input['delete_on_uninstall'] );
 
+		// uninstall.php runs in a stripped-down WP bootstrap that may not
+		// load this plugin's settings array reliably; mirror the flag to a
+		// dedicated top-level option it can read directly.
+		if ( $sanitized['delete_on_uninstall'] ) {
+			update_option( 'ptai_delete_data_on_uninstall', 1 );
+		} else {
+			delete_option( 'ptai_delete_data_on_uninstall' );
+		}
+
 		// Integer size limits with bounds.
 		$sanitized['max_image_size'] = $this->sanitize_bounded_int( $input, 'max_image_size', __( 'Max image size (MB)', 'papertrail-ai' ), $defaults['max_image_size'], 1, 50 );
 		$sanitized['max_video_size'] = $this->sanitize_bounded_int( $input, 'max_video_size', __( 'Max video size (MB)', 'papertrail-ai' ), $defaults['max_video_size'], 1, 500 );
