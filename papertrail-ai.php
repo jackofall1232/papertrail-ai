@@ -1,13 +1,13 @@
 <?php
 /**
  * Plugin Name:       PaperTrail AI — Smart Document Library
- * Plugin URI:        https://askadamit.com/papertrail-ai
+ * Plugin URI:        https://github.com/jackofall1232/papertrail-ai
  * Description:       AI-powered document library for WordPress. Upload, organize, and semantically search files using OpenAI embeddings.
  * Version:           1.0.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
- * Author:            Ask Adam
- * Author URI:        https://askadamit.com
+ * Author:            jackofall1232
+ * Author URI:        https://github.com/jackofall1232
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       papertrail-ai
