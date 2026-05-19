@@ -185,9 +185,14 @@
 			try {
 				var saved = sessionStorage.getItem( 'ptai_active_tab' );
 				if ( saved ) {
-					var $target = $nav.find( '[data-tab="' + saved + '"]' );
+					// Filter on the existing collection instead of building an
+					// attribute selector — avoids selector-injection issues if
+					// the stored value contains quotes or special characters.
+					var $target = $btns.filter( function () {
+						return $( this ).data( 'tab' ) === saved;
+					} );
 					if ( $target.length ) {
-						activateTab( $target, false );
+						activateTab( $target.first(), false );
 						restored = true;
 					}
 				}

@@ -611,6 +611,11 @@ class PTAI_Admin {
 						<?php
 						settings_fields( PTAI_Settings::SETTINGS_GROUP );
 
+						global $wp_settings_sections;
+						$page_sections = isset( $wp_settings_sections[ PTAI_Settings::PAGE_SLUG ] )
+							? $wp_settings_sections[ PTAI_Settings::PAGE_SLUG ]
+							: array();
+
 						$sections = array(
 							'ptai-tab-ai'       => 'ptai_section_ai',
 							'ptai-tab-uploads'  => 'ptai_section_uploads',
@@ -627,6 +632,21 @@ class PTAI_Admin {
 								class="ptai-tab-panel<?php echo esc_attr( $active ); ?>"
 								role="tabpanel"
 								aria-labelledby="<?php echo esc_attr( $btn_id ); ?>">
+								<?php
+								// Render the section description callback (the section
+								// title is intentionally omitted — the tab button is
+								// the section heading). do_settings_fields() below
+								// only outputs the field <tr> rows, so without this
+								// the descriptions registered via add_settings_section
+								// would silently disappear.
+								if ( isset( $page_sections[ $section_id ]['callback'] )
+									&& is_callable( $page_sections[ $section_id ]['callback'] ) ) {
+									call_user_func(
+										$page_sections[ $section_id ]['callback'],
+										$page_sections[ $section_id ]
+									);
+								}
+								?>
 								<table class="form-table" role="presentation">
 									<tbody>
 										<?php
