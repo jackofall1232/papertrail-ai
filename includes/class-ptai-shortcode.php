@@ -114,10 +114,16 @@ class PTAI_Shortcode {
 		ob_start();
 
 		if ( $show_search ) {
-			echo $this->render_search_bar( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				array(
-					'category_id' => $category_id,
-					'mode'        => $mode,
+			// render_search_bar() returns template-generated HTML in which every
+			// value is already escaped at the point of output (esc_url, esc_attr).
+			// wp_kses_post() declares that intent to PHPCS without stripping the
+			// <form>/<input>/<button> markup that esc_html() would destroy.
+			echo wp_kses_post(
+				$this->render_search_bar(
+					array(
+						'category_id' => absint( $category_id ),
+						'mode'        => sanitize_key( $mode ),
+					)
 				)
 			);
 		}

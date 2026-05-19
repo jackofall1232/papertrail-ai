@@ -1042,8 +1042,9 @@ class PTAI_Admin {
 			return;
 		}
 
-		$raw     = isset( $_POST['_ptai_doc_summary'] ) ? wp_unslash( $_POST['_ptai_doc_summary'] ) : '';
-		$summary = sanitize_textarea_field( (string) $raw );
+		$summary = isset( $_POST['_ptai_doc_summary'] )
+			? sanitize_textarea_field( wp_unslash( $_POST['_ptai_doc_summary'] ) )
+			: '';
 		// mb_substr to avoid splitting UTF-8 characters at the 500-char cap.
 		$summary = function_exists( 'mb_substr' )
 			? mb_substr( $summary, 0, 500, 'UTF-8' )
@@ -1384,8 +1385,8 @@ class PTAI_Admin {
 				'<div class="notice notice-warning"><p>%s</p></div>',
 				esc_html(
 					sprintf(
-						/* translators: %d: maximum number of documents scored per AI search. */
-						__( 'PaperTrail AI: Your library exceeds %d documents. The free version scores only the most recent %d during AI search. Upgrade to Pro for full-library vector search.', 'papertrail-ai' ),
+						/* translators: 1: document count threshold, 2: number of documents scored per AI search. */
+						__( 'PaperTrail AI: Your library exceeds %1$d documents. The free version scores only the most recent %2$d during AI search. Upgrade to Pro for full-library vector search.', 'papertrail-ai' ),
 						PTAI_Search::MAX_SCORED_POSTS,
 						PTAI_Search::MAX_SCORED_POSTS
 					)

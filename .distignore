@@ -1,0 +1,17 @@
+# Files excluded from the distributed plugin package.
+# Used by wp-cli dist-archive and similar packaging tools.
+.git
+.gitignore
+.gitkeep
+.gitattributes
+.distignore
+.phpcs.xml.dist
+phpcs.xml
+node_modules
+composer.json
+composer.lock
+package.json
+package-lock.json
+*.map
+Gruntfile.js
+webpack.config.js
