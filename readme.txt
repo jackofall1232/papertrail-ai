@@ -4,7 +4,7 @@ Tags: document library, file manager, AI search, PDF, OpenAI
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -88,6 +88,9 @@ PaperTrail AI is translation-ready. A .pot file is included in the languages/ fo
 
 == Changelog ==
 
+= 1.0.1 =
+* Branded admin UI with teal hero, tabbed settings, and help documentation tab.
+
 = 1.0.0 =
 * Initial release.
 * `ptai_file` custom post type and `ptai_category` taxonomy.
@@ -99,6 +102,9 @@ PaperTrail AI is translation-ready. A .pot file is included in the languages/ fo
 * Opt-in clean uninstall.
 
 == Upgrade Notice ==
+
+= 1.0.1 =
+Refreshed admin settings page with branded teal hero, tabbed layout, and help tab.
 
 = 1.0.0 =
 Initial release.
