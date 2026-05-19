@@ -661,6 +661,30 @@ class PTAI_Admin {
 							<?php
 							$first = false;
 						}
+
+						// Render any extra sections registered by add-ons or site
+						// code against this page slug that aren't part of our tab
+						// layout. They appear as flat blocks below the tab panels
+						// so their UI stays reachable instead of silently
+						// disappearing. Mirrors do_settings_sections() output.
+						$known_section_ids = array_values( $sections );
+						foreach ( $page_sections as $section ) {
+							if ( ! is_array( $section ) || empty( $section['id'] ) ) {
+								continue;
+							}
+							if ( in_array( $section['id'], $known_section_ids, true ) ) {
+								continue;
+							}
+							if ( ! empty( $section['title'] ) ) {
+								echo '<h2>' . esc_html( $section['title'] ) . '</h2>';
+							}
+							if ( ! empty( $section['callback'] ) && is_callable( $section['callback'] ) ) {
+								call_user_func( $section['callback'], $section );
+							}
+							echo '<table class="form-table" role="presentation"><tbody>';
+							do_settings_fields( PTAI_Settings::PAGE_SLUG, $section['id'] );
+							echo '</tbody></table>';
+						}
 						?>
 
 						<?php submit_button(); ?>
