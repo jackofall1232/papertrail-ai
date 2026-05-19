@@ -273,7 +273,7 @@ class PTAI_Settings {
 		echo '<fieldset>';
 		foreach ( $roles as $role_key => $role ) {
 			printf(
-				'<label style="display:block;"><input type="checkbox" name="%1$s[allowed_roles][]" value="%2$s" %3$s /> %4$s</label>',
+				'<label class="ptai-role-option"><input type="checkbox" name="%1$s[allowed_roles][]" value="%2$s" %3$s /> %4$s</label>',
 				esc_attr( self::OPTION_NAME ),
 				esc_attr( $role_key ),
 				checked( in_array( $role_key, $selected, true ), true, false ),
@@ -342,6 +342,7 @@ class PTAI_Settings {
 		// API key — sanitize, then base64-encode for storage.
 		// An empty submission means "keep the existing key" so admins can
 		// re-save other settings without re-entering the key each time.
+		$key_changed = false;
 		if ( array_key_exists( 'openai_api_key', $input ) ) {
 			$raw_input = (string) $input['openai_api_key'];
 			$existing  = get_option( self::OPTION_NAME, array() );
@@ -356,6 +357,9 @@ class PTAI_Settings {
 					$sanitized['openai_api_key'] = $old_key;
 				} else {
 					$sanitized['openai_api_key'] = base64_encode( $plain );
+					if ( $sanitized['openai_api_key'] !== $old_key ) {
+						$key_changed = true;
+					}
 				}
 			}
 		}
@@ -384,6 +388,13 @@ class PTAI_Settings {
 			add_settings_error( self::OPTION_NAME, 'ptai_empty_roles', __( 'At least one role must be allowed. Reset to administrator only.', 'papertrail-ai' ), 'updated' );
 		}
 		$sanitized['allowed_roles'] = array_values( array_unique( $roles ) );
+
+		// Clear the OpenAI auth-failure circuit breaker only when the
+		// stored key actually changed. Resetting on every save would
+		// retry against a known-bad key after unrelated edits.
+		if ( $key_changed ) {
+			delete_option( 'ptai_openai_auth_failed' );
+		}
 
 		return $sanitized;
 	}
@@ -514,7 +525,8 @@ class PTAI_Settings {
 				'png'     => 'image/png',
 				'gif'     => 'image/gif',
 				'webp'    => 'image/webp',
-				'svg'     => 'image/svg+xml',
+				// SVG intentionally excluded — stored XSS vector.
+				// SVG support requires dedicated sanitization — available in Pro.
 			),
 			'video'     => array(
 				'mp4'  => 'video/mp4',

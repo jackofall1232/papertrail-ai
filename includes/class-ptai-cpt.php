@@ -228,6 +228,21 @@ class PTAI_CPT {
 				)
 			);
 		}
+
+		register_post_meta(
+			PTAI_CPT,
+			'_ptai_doc_summary',
+			array(
+				'type'              => 'string',
+				'description'       => __( 'Document summary used as AI embedding source.', 'papertrail-ai' ),
+				'single'            => true,
+				'sanitize_callback' => 'sanitize_textarea_field',
+				'auth_callback'     => function () {
+					return current_user_can( 'edit_posts' );
+				},
+				'show_in_rest'      => false,
+			)
+		);
 	}
 
 	/**
