@@ -1,5 +1,5 @@
 === PaperTrail AI — Smart Document Library ===
-Contributors: askadamit
+Contributors: jackofall1232
 Tags: document library, file manager, AI search, PDF, OpenAI
 Requires at least: 6.0
 Tested up to: 6.9
