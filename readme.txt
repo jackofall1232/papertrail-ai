@@ -35,9 +35,12 @@ There are no feature locks, license checks, or paid upgrades inside this plugin.
 
 When an OpenAI API key is provided in Settings, PaperTrail AI sends document summary text to the OpenAI API to generate search embeddings.
 
-**What data is sent:** The document title, excerpt, AI Search Summary field, and category names for each published document. No personal user data is sent.
+**What data is sent:**
 
-**When data is sent:** Only when a document is published or updated (via WP-Cron, a few seconds after save), or when an admin manually regenerates an embedding. Data is also sent when a visitor performs a search (the search query is sent to generate a query embedding for semantic matching).
+* *Document metadata (admin-controlled):* The document title, excerpt, AI Search Summary field, and category names for each published document. This is content the site administrator has authored and chosen to publish — no visitor or account data is included.
+* *Visitor search text (visitor-controlled):* When a visitor performs an AI search, the raw search query they typed is sent to OpenAI to generate a query embedding for semantic matching. The plugin cannot inspect this text in advance, so if visitors enter personal information (names, email addresses, etc.) it will be transmitted to OpenAI as part of the query. No IP address, user ID, cookie, or other identifier is attached.
+
+**When data is sent:** Document metadata is sent when a document is published or updated (via WP-Cron, a few seconds after save), or when an admin manually regenerates an embedding. Visitor search text is sent each time a visitor submits an AI-mode search.
 
 **This feature is entirely optional.** The plugin works fully without an API key using keyword search.
 
