@@ -79,7 +79,11 @@ class PTAI_OpenAI {
 			return false;
 		}
 
-		$text = substr( trim( wp_strip_all_tags( (string) $text ) ), 0, self::MAX_EMBEDDING_CHARS );
+		$text = trim( wp_strip_all_tags( (string) $text ) );
+		// mb_substr to avoid splitting UTF-8 sequences when truncating.
+		$text = function_exists( 'mb_substr' )
+			? mb_substr( $text, 0, self::MAX_EMBEDDING_CHARS, 'UTF-8' )
+			: substr( $text, 0, self::MAX_EMBEDDING_CHARS );
 		if ( '' === $text ) {
 			return false;
 		}

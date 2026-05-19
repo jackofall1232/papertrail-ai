@@ -620,7 +620,10 @@ class PTAI_Admin {
 
 		$raw     = isset( $_POST['_ptai_doc_summary'] ) ? wp_unslash( $_POST['_ptai_doc_summary'] ) : '';
 		$summary = sanitize_textarea_field( (string) $raw );
-		$summary = substr( $summary, 0, 500 );
+		// mb_substr to avoid splitting UTF-8 characters at the 500-char cap.
+		$summary = function_exists( 'mb_substr' )
+			? mb_substr( $summary, 0, 500, 'UTF-8' )
+			: substr( $summary, 0, 500 );
 
 		update_post_meta( $post_id, '_ptai_doc_summary', $summary );
 	}

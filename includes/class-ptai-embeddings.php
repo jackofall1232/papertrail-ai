@@ -131,7 +131,10 @@ class PTAI_Embeddings {
 		$text = implode( "\n", $pieces );
 		$text = preg_replace( '/\s+/', ' ', $text );
 		$text = (string) $text;
-		$text = substr( $text, 0, PTAI_OpenAI::MAX_EMBEDDING_CHARS );
+		// mb_substr to avoid splitting UTF-8 sequences when truncating.
+		$text = function_exists( 'mb_substr' )
+			? mb_substr( $text, 0, PTAI_OpenAI::MAX_EMBEDDING_CHARS, 'UTF-8' )
+			: substr( $text, 0, PTAI_OpenAI::MAX_EMBEDDING_CHARS );
 
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'PTAI_DEBUG' ) && PTAI_DEBUG ) {
 			error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions
