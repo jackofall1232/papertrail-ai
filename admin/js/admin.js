@@ -146,6 +146,11 @@
 				$panels.removeClass( 'ptai-tab-panel--active' );
 				$wrap.find( '#' + tabId ).addClass( 'ptai-tab-panel--active' );
 
+				// Expose the active tab id on the wrap so CSS can react
+				// (e.g. hiding the Save Settings button on the Help tab,
+				// which is static documentation and has no form fields).
+				$wrap.attr( 'data-active-tab', tabId );
+
 				if ( moveFocus ) {
 					$btn.trigger( 'focus' );
 				}

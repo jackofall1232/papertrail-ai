@@ -254,12 +254,77 @@
     min-width: 300px;
 }
 
-.ptai-settings-layout .ptai-settings-main .form-table {
+/* Shared panel card — used by both settings tabs and the Help tab so
+   every tab renders inside the same white card with a teal heading
+   bar. The help sections reuse the same base via .ptai-help__section. */
+.ptai-panel-card,
+.ptai-help__section {
     background: var(--ptai-white);
     border: 1px solid var(--ptai-border);
     border-radius: var(--ptai-radius);
     box-shadow: var(--ptai-shadow);
+    margin-bottom: 20px;
     overflow: hidden;
+}
+
+.ptai-panel-heading,
+.ptai-help__heading {
+    align-items: center;
+    background: var(--ptai-bg);
+    border-bottom: 1px solid var(--ptai-border);
+    color: var(--ptai-teal-dark);
+    display: flex;
+    font-size: 13px;
+    font-weight: 700;
+    gap: 8px;
+    letter-spacing: 0.04em;
+    margin: 0;
+    padding: 12px 20px;
+    text-transform: uppercase;
+}
+
+.ptai-panel-heading .dashicons,
+.ptai-help__heading .dashicons {
+    color: var(--ptai-teal);
+    flex-shrink: 0;
+    font-size: 16px;
+    height: 16px;
+    line-height: 1;
+    width: 16px;
+}
+
+/* Section description paragraph rendered above the form table. */
+.ptai-panel-description {
+    border-bottom: 1px solid var(--ptai-border);
+    color: var(--ptai-text-mid);
+    font-size: 13px;
+    padding: 14px 20px;
+}
+
+.ptai-panel-description p {
+    margin: 0 0 8px;
+}
+
+.ptai-panel-description p:last-child {
+    margin-bottom: 0;
+}
+
+/* When a section has no fields registered, hide the empty form table
+   so the panel card doesn't show a bare gap below the description. */
+.ptai-panel-card .form-table:empty,
+.ptai-panel-card .form-table tbody:empty {
+    display: none;
+}
+
+/* Form table sits inside the panel card — drop its standalone card
+   chrome so it doesn't render as a card-in-a-card. */
+.ptai-settings-layout .ptai-settings-main .ptai-panel-card .form-table {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
+    overflow: visible;
 }
 
 .ptai-settings-layout .ptai-settings-main .form-table th,
@@ -280,8 +345,10 @@
     width: 220px;
 }
 
-/* WP settings section headings */
-.ptai-settings-main h2 {
+/* WP settings section headings injected by other plugins below the
+   tabbed layout (we suppress our own section titles since the panel
+   heading already names each section). */
+.ptai-settings-main > form > h2 {
     font-size: 14px;
     font-weight: 700;
     color: var(--ptai-teal-dark);
@@ -309,13 +376,21 @@
     font-weight: 600;
 }
 
-/* Submit button area */
+/* Submit button area — standalone bar below the active panel card. */
 .ptai-settings-main .submit {
     padding: 16px 20px;
-    background: var(--ptai-bg);
-    border-top: 1px solid var(--ptai-border);
+    background: var(--ptai-white);
+    border: 1px solid var(--ptai-border);
+    box-shadow: var(--ptai-shadow);
     margin: 0;
-    border-radius: 0 0 var(--ptai-radius) var(--ptai-radius);
+    border-radius: var(--ptai-radius);
+}
+
+/* The Help tab is static documentation — hide the Save Settings
+   button so it doesn't imply there are unsaved changes there. */
+.ptai-settings-wrap[data-active-tab="ptai-tab-help"]
+    .ptai-settings-main .submit {
+    display: none;
 }
 
 /* API key field — mask the value visually */
@@ -572,38 +647,9 @@ input[name="ptai_settings[openai_api_key]"] {
     max-width: 800px;
 }
 
-.ptai-help__section {
-    background: var(--ptai-white);
-    border: 1px solid var(--ptai-border);
-    border-radius: var(--ptai-radius);
-    box-shadow: var(--ptai-shadow);
-    margin-bottom: 20px;
-    overflow: hidden;
-}
-
-.ptai-help .ptai-help__heading {
-    align-items: center;
-    background: var(--ptai-bg);
-    border-bottom: 1px solid var(--ptai-border);
-    color: var(--ptai-teal-dark);
-    display: flex;
-    font-size: 13px;
-    font-weight: 700;
-    gap: 8px;
-    letter-spacing: 0.04em;
-    margin: 0;
-    padding: 12px 20px;
-    text-transform: uppercase;
-}
-
-.ptai-help__heading .dashicons {
-    color: var(--ptai-teal);
-    flex-shrink: 0;
-    font-size: 16px;
-    height: 16px;
-    line-height: 1;
-    width: 16px;
-}
+/* .ptai-help__section and .ptai-help__heading share their card +
+   heading-bar styling with .ptai-panel-card / .ptai-panel-heading
+   in section 6 above — no duplicate rules needed here. */
 
 .ptai-help__subheading {
     color: var(--ptai-text-dark);
