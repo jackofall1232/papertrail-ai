@@ -22,19 +22,69 @@ defined( 'ABSPATH' ) || exit;
 // Detect whether we're being included by the shortcode or as a full template.
 $ptai_standalone = empty( $ptai_in_shortcode );
 
-// When the theme runs us as the full archive template, build a results
-// array from the main query so the markup below is identical either way.
+// Standalone (theme archive) path — honor `?ptai_q=` GET searches and
+// preserve taxonomy-archive scope so a category landing keeps its filter.
+$ptai_archive_query    = '';
+$ptai_archive_category = 0;
+$ptai_archive_mode     = 'auto';
+
 if ( $ptai_standalone ) {
 	get_header();
 
-	global $wp_query;
-	$ptai_results = array(
-		'posts'     => is_array( $wp_query->posts ) ? $wp_query->posts : array(),
-		'total'     => (int) $wp_query->found_posts,
-		'pages'     => (int) $wp_query->max_num_pages,
-		'mode_used' => 'core',
-		'query'     => isset( $_GET['ptai_q'] ) ? sanitize_text_field( wp_unslash( $_GET['ptai_q'] ) ) : '', // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-	);
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	if ( isset( $_GET['ptai_q'] ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$ptai_archive_query = sanitize_text_field( wp_unslash( $_GET['ptai_q'] ) );
+	}
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	if ( isset( $_GET['ptai_category'] ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$ptai_archive_category = absint( wp_unslash( $_GET['ptai_category'] ) );
+	}
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	if ( isset( $_GET['ptai_mode'] ) ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$ptai_archive_mode = sanitize_key( wp_unslash( $_GET['ptai_mode'] ) );
+		if ( ! in_array( $ptai_archive_mode, array( 'auto', 'ai', 'core' ), true ) ) {
+			$ptai_archive_mode = 'auto';
+		}
+	}
+
+	// Taxonomy archives carry their own scope — use the queried term so
+	// in-page search stays inside the visitor's current category.
+	if ( 0 === $ptai_archive_category && is_tax( PTAI_TAXONOMY ) ) {
+		$ptai_queried_term = get_queried_object();
+		if ( $ptai_queried_term instanceof WP_Term ) {
+			$ptai_archive_category = (int) $ptai_queried_term->term_id;
+		}
+	}
+
+	if ( '' !== $ptai_archive_query ) {
+		// A search was submitted — re-run through PTAI_Search so the
+		// archive view reflects the query (and uses AI when configured).
+		$ptai_search  = new PTAI_Search();
+		$ptai_results = $ptai_search->search(
+			$ptai_archive_query,
+			array(
+				'per_page' => (int) get_query_var( 'posts_per_page', 10 ),
+				'page'     => max( 1, (int) get_query_var( 'paged', 1 ) ),
+				'category' => $ptai_archive_category,
+				'mode'     => $ptai_archive_mode,
+			)
+		);
+	} else {
+		// No search — render the main query as-is. WordPress has already
+		// scoped it to the current taxonomy term (if applicable).
+		global $wp_query;
+		$ptai_results = array(
+			'posts'     => is_array( $wp_query->posts ) ? $wp_query->posts : array(),
+			'total'     => (int) $wp_query->found_posts,
+			'pages'     => (int) $wp_query->max_num_pages,
+			'mode_used' => 'core',
+			'query'     => '',
+		);
+	}
+
 	$ptai_columns = 1;
 }
 
@@ -54,10 +104,12 @@ $ptai_columns = isset( $ptai_columns ) ? (int) $ptai_columns : 1;
 		</header>
 
 		<?php
-		// Render the search bar partial for the archive page.
+		// Render the search bar partial for the archive page, passing
+		// the active category/mode so AJAX and no-JS submits stay scoped
+		// to the visitor's current view.
 		$ptai_search_context = array(
-			'category_id' => 0,
-			'mode'        => 'auto',
+			'category_id' => (int) $ptai_archive_category,
+			'mode'        => (string) $ptai_archive_mode,
 		);
 		include PTAI_PLUGIN_DIR . 'templates/partials/search-bar.php';
 		?>

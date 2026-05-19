@@ -13,35 +13,36 @@
 		return;
 	}
 
-	/* 1. AJAX search form handler
-	------------------------------------------------------------ */
-	var $form = $( '.ptai-search-form' );
-	if ( ! $form.length ) {
+	var $forms = $( '.ptai-search-form' );
+	if ( ! $forms.length ) {
 		return;
 	}
 
-	var $btn          = $form.find( '.ptai-search-btn' );
-	var originalBtn   = $btn.text();
-	var $library      = $form.closest( '.ptai-document-library' );
-	var $list;
+	/* 1. Per-form AJAX submit handler
+	------------------------------------------------------------ */
+	// Use a delegated handler so each submission is scoped to the form
+	// that fired it. This matters when a page renders multiple
+	// [papertrail] shortcode instances — each library must search and
+	// update only its own list.
+	$forms.on( 'submit', function ( e ) {
+		var $form = $( this );
+		var $btn  = $form.find( '.ptai-search-btn' );
+		var $list = findListForForm( $form );
 
-	if ( $library.length ) {
-		$list = $library.find( '.ptai-file-list' );
-		if ( ! $list.length ) {
-			$list = $( '<ul class="ptai-file-list ptai-columns-1"></ul>' ).appendTo( $library );
-		}
-	} else {
-		$list = $( '.ptai-file-list' ).first();
-	}
-
-	$form.on( 'submit', function ( e ) {
 		if ( ! $list || ! $list.length ) {
-			return; // Let the form submit normally — no JS target.
+			// Nothing JS can update — let the browser submit normally.
+			return;
 		}
 
 		e.preventDefault();
 
-		var query    = $form.find( '#ptai-search-input' ).val() || '';
+		var originalBtn = $btn.data( 'ptai-original-text' );
+		if ( typeof originalBtn === 'undefined' ) {
+			originalBtn = $btn.text();
+			$btn.data( 'ptai-original-text', originalBtn );
+		}
+
+		var query    = $form.find( '#ptai-search-input, .ptai-search-input' ).first().val() || '';
 		var category = $form.find( '[name="ptai_category"]' ).val() || 0;
 		var mode     = $form.find( '[name="ptai_mode"]' ).val() || 'auto';
 
@@ -57,7 +58,7 @@
 		} )
 			.done( function ( response ) {
 				if ( response && response.success && response.data && response.data.posts && response.data.posts.length ) {
-					renderResults( response.data.posts );
+					renderResults( $list, response.data.posts );
 				} else {
 					$list.html(
 						'<li class="ptai-no-results">' +
@@ -78,9 +79,24 @@
 			} );
 	} );
 
-	/* 2. Render results
+	/* 2. Locate the result list belonging to a given form
 	------------------------------------------------------------ */
-	function renderResults( posts ) {
+	function findListForForm( $form ) {
+		var $library = $form.closest( '.ptai-document-library' );
+		if ( $library.length ) {
+			var $list = $library.find( '.ptai-file-list' );
+			if ( ! $list.length ) {
+				$list = $( '<ul class="ptai-file-list ptai-columns-1"></ul>' ).appendTo( $library );
+			}
+			return $list;
+		}
+		// Form is not inside a library wrapper — no JS render target.
+		return $();
+	}
+
+	/* 3. Render results into the given list
+	------------------------------------------------------------ */
+	function renderResults( $list, posts ) {
 		var html = '';
 		$.each( posts, function ( i, post ) {
 			html +=
@@ -105,7 +121,7 @@
 		$list.html( html );
 	}
 
-	/* 3. Minimal XSS guard for JS-rendered output
+	/* 4. Minimal XSS guard for JS-rendered output
 	------------------------------------------------------------ */
 	function escHtml( str ) {
 		if ( typeof str !== 'string' ) {
