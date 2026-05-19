@@ -365,9 +365,9 @@ class PTAI_Settings {
 		$sanitized['delete_on_uninstall'] = ! empty( $input['delete_on_uninstall'] );
 
 		// Integer size limits with bounds.
-		$sanitized['max_image_size'] = $this->sanitize_bounded_int( $input, 'max_image_size', $defaults['max_image_size'], 1, 50 );
-		$sanitized['max_video_size'] = $this->sanitize_bounded_int( $input, 'max_video_size', $defaults['max_video_size'], 1, 500 );
-		$sanitized['max_audio_size'] = $this->sanitize_bounded_int( $input, 'max_audio_size', $defaults['max_audio_size'], 1, 100 );
+		$sanitized['max_image_size'] = $this->sanitize_bounded_int( $input, 'max_image_size', __( 'Max image size (MB)', 'papertrail-ai' ), $defaults['max_image_size'], 1, 50 );
+		$sanitized['max_video_size'] = $this->sanitize_bounded_int( $input, 'max_video_size', __( 'Max video size (MB)', 'papertrail-ai' ), $defaults['max_video_size'], 1, 500 );
+		$sanitized['max_audio_size'] = $this->sanitize_bounded_int( $input, 'max_audio_size', __( 'Max audio size (MB)', 'papertrail-ai' ), $defaults['max_audio_size'], 1, 100 );
 
 		// Allowed roles — validate against editable roles.
 		$valid_roles = array_keys( get_editable_roles() );
@@ -393,12 +393,13 @@ class PTAI_Settings {
 	 *
 	 * @param array  $input   Raw input.
 	 * @param string $key     Key to read.
+	 * @param string $label   Human-readable field name (already translated).
 	 * @param int    $default Default if missing/invalid.
 	 * @param int    $min     Minimum.
 	 * @param int    $max     Maximum.
 	 * @return int
 	 */
-	private function sanitize_bounded_int( $input, $key, $default, $min, $max ) {
+	private function sanitize_bounded_int( $input, $key, $label, $default, $min, $max ) {
 		if ( ! isset( $input[ $key ] ) || '' === $input[ $key ] ) {
 			return $default;
 		}
@@ -409,9 +410,9 @@ class PTAI_Settings {
 				self::OPTION_NAME,
 				'ptai_out_of_range_' . $key,
 				sprintf(
-					/* translators: 1: field key, 2: min, 3: max */
+					/* translators: 1: human-readable field label, 2: min, 3: max */
 					__( '%1$s must be between %2$d and %3$d. Value was clamped.', 'papertrail-ai' ),
-					$key,
+					$label,
 					$min,
 					$max
 				)
@@ -441,8 +442,21 @@ class PTAI_Settings {
 			if ( empty( $settings['openai_api_key'] ) ) {
 				return null === $default_value ? '' : $default_value;
 			}
-			$decoded = base64_decode( $settings['openai_api_key'], true );
-			return false === $decoded ? '' : $decoded;
+			$stored = (string) $settings['openai_api_key'];
+
+			// Strict base64 decode. If the stored value isn't valid base64,
+			// fall back to returning it as-is — most likely a legacy
+			// plaintext key from before obfuscation was introduced. This
+			// preserves the admin's data rather than silently losing it.
+			$decoded = base64_decode( $stored, true );
+			if ( false === $decoded ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+					error_log( 'PaperTrail AI: stored OpenAI API key is not base64-encoded; treating as legacy plaintext. Re-save the key to obfuscate it.' );
+				}
+				return $stored;
+			}
+			return $decoded;
 		}
 
 		if ( array_key_exists( $key, $settings ) ) {

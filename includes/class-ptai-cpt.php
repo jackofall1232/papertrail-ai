@@ -152,6 +152,17 @@ class PTAI_CPT {
 			return current_user_can( 'edit_posts' );
 		};
 
+		// No-op string sanitizer for opaque payloads (embeddings).
+		// sanitize_textarea_field strips bytes that are valid inside
+		// JSON / base64 (e.g. "<"), corrupting the stored vector. We
+		// only need to guarantee the stored value is a UTF-8 string.
+		$passthrough = static function ( $value ) {
+			if ( ! is_string( $value ) ) {
+				return '';
+			}
+			return wp_check_invalid_utf8( $value );
+		};
+
 		$fields = array(
 			'_ptai_file_id'         => array(
 				'type'              => 'integer',
@@ -192,13 +203,13 @@ class PTAI_CPT {
 			'_ptai_embedding'       => array(
 				'type'              => 'string',
 				'description'       => __( 'Serialized OpenAI embedding vector for this document. Never exposed via REST.', 'papertrail-ai' ),
-				'sanitize_callback' => 'sanitize_textarea_field',
+				'sanitize_callback' => $passthrough,
 				'show_in_rest'      => false,
 			),
 			'_ptai_embedding_info'  => array(
 				'type'              => 'string',
 				'description'       => __( 'Internal embedding metadata (model, dimensions, generated_at). Never exposed via REST.', 'papertrail-ai' ),
-				'sanitize_callback' => 'sanitize_textarea_field',
+				'sanitize_callback' => $passthrough,
 				'show_in_rest'      => false,
 			),
 		);

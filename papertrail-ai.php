@@ -158,8 +158,13 @@ function ptai_bootstrap() {
 	if ( class_exists( 'PTAI_CPT' ) ) {
 		new PTAI_CPT();
 	}
-	if ( class_exists( 'PTAI_Admin' ) && is_admin() ) {
-		new PTAI_Admin();
+	if ( is_admin() ) {
+		if ( class_exists( 'PTAI_Settings' ) ) {
+			new PTAI_Settings();
+		}
+		if ( class_exists( 'PTAI_Admin' ) ) {
+			new PTAI_Admin();
+		}
 	}
 }
 add_action( 'plugins_loaded', 'ptai_bootstrap' );
@@ -238,9 +243,10 @@ function ptai_handle_download( WP_REST_Request $request ) {
 	update_post_meta( $post_id, '_ptai_download_count', $count + 1 );
 	update_post_meta( $post_id, '_ptai_last_downloaded', current_time( 'mysql' ) );
 
-	return new WP_REST_Response(
-		null,
-		302,
-		array( 'Location' => esc_url_raw( $url ) )
-	);
+	// Bypass the REST JSON envelope: emit a true HTTP redirect.
+	// wp_safe_redirect() restricts to allowed hosts; the attachment URL is
+	// always on the same site, so it is safe by definition.
+	nocache_headers();
+	wp_safe_redirect( $url, 302 );
+	exit;
 }

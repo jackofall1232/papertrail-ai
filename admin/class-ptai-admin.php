@@ -23,21 +23,15 @@ class PTAI_Admin {
 	const SETTINGS_PAGE_SLUG = 'ptai-settings';
 
 	/**
-	 * Settings controller, used to render the form on the settings screen.
-	 *
-	 * @var PTAI_Settings|null
-	 */
-	private $settings;
-
-	/**
 	 * Constructor. Wires admin hooks directly so the class is self-contained
 	 * regardless of how PTAI_Loader is wired.
+	 *
+	 * Note: PTAI_Settings is instantiated separately from the plugin
+	 * bootstrap. The settings page renders the form via the static
+	 * PTAI_Settings::SETTINGS_GROUP / PAGE_SLUG constants, so no
+	 * instance reference is needed here.
 	 */
 	public function __construct() {
-		if ( class_exists( 'PTAI_Settings' ) ) {
-			$this->settings = new PTAI_Settings();
-		}
-
 		add_action( 'admin_menu', array( $this, 'register_settings_page' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_styles' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
