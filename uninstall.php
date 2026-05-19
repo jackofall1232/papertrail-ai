@@ -35,7 +35,7 @@ do {
 			'post_status'      => 'any',
 			'numberposts'      => $ptai_batch_size,
 			'fields'           => 'ids',
-			'suppress_filters' => true,
+			'no_found_rows'    => true,
 		)
 	);
 
