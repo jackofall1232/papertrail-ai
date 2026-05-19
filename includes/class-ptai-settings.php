@@ -342,6 +342,7 @@ class PTAI_Settings {
 		// API key — sanitize, then base64-encode for storage.
 		// An empty submission means "keep the existing key" so admins can
 		// re-save other settings without re-entering the key each time.
+		$key_changed = false;
 		if ( array_key_exists( 'openai_api_key', $input ) ) {
 			$raw_input = (string) $input['openai_api_key'];
 			$existing  = get_option( self::OPTION_NAME, array() );
@@ -356,6 +357,9 @@ class PTAI_Settings {
 					$sanitized['openai_api_key'] = $old_key;
 				} else {
 					$sanitized['openai_api_key'] = base64_encode( $plain );
+					if ( $sanitized['openai_api_key'] !== $old_key ) {
+						$key_changed = true;
+					}
 				}
 			}
 		}
@@ -385,9 +389,12 @@ class PTAI_Settings {
 		}
 		$sanitized['allowed_roles'] = array_values( array_unique( $roles ) );
 
-		// Re-saving settings clears the OpenAI auth-failure circuit breaker
-		// so a corrected key can be tried again without manual intervention.
-		delete_option( 'ptai_openai_auth_failed' );
+		// Clear the OpenAI auth-failure circuit breaker only when the
+		// stored key actually changed. Resetting on every save would
+		// retry against a known-bad key after unrelated edits.
+		if ( $key_changed ) {
+			delete_option( 'ptai_openai_auth_failed' );
+		}
 
 		return $sanitized;
 	}

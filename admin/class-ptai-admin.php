@@ -780,7 +780,11 @@ class PTAI_Admin {
 			);
 		}
 
-		if ( $settings->is_ai_enabled() && 'disabled' !== $status ) {
+		if (
+			$settings->is_ai_enabled()
+			&& 'disabled' !== $status
+			&& current_user_can( 'edit_post', $post->ID )
+		) {
 			$regen_url = wp_nonce_url(
 				admin_url(
 					'admin-post.php?action=ptai_regenerate_embedding&post_id=' . absint( $post->ID )

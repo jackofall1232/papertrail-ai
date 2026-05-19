@@ -13,22 +13,39 @@ defined( 'ABSPATH' ) || exit;
  * Generates, stores, and retrieves OpenAI embeddings for ptai_file
  * posts. The source text is assembled entirely from WordPress data
  * (title, excerpt, doc summary, category names) — no file parsing.
+ *
+ * Embedding generation on save_post is offloaded to a WP-Cron single
+ * event so saves return immediately. The explicit `generate_embedding()`
+ * entry point still runs synchronously for admin-triggered regeneration.
  */
 class PTAI_Embeddings {
 
 	const META_KEY      = '_ptai_embedding';
 	const META_KEY_INFO = '_ptai_embedding_info';
+	const CRON_HOOK     = 'ptai_generate_embedding';
 
 	/**
-	 * Constructor. Wires save/delete hooks.
+	 * Constructor. Intentionally side-effect-free so query helpers can
+	 * be invoked from row actions without registering duplicate hooks.
+	 * Call `init()` exactly once from the bootstrap.
 	 */
-	public function __construct() {
-		add_action( 'save_post_' . PTAI_CPT, array( $this, 'on_save_post' ) );
+	public function __construct() {}
+
+	/**
+	 * Wire WordPress hooks. Call once during plugin bootstrap.
+	 *
+	 * @return void
+	 */
+	public function init() {
+		// Priority 20 so PTAI_Admin::save_meta_box (priority 10) has
+		// already persisted _ptai_doc_summary before we read it.
+		add_action( 'save_post_' . PTAI_CPT, array( $this, 'on_save_post' ), 20 );
 		add_action( 'before_delete_post', array( $this, 'on_delete_post' ) );
+		add_action( self::CRON_HOOK, array( $this, 'process_embedding_job' ) );
 	}
 
 	/**
-	 * Hook callback: regenerate the embedding when a ptai_file is saved.
+	 * Hook callback: queue an embedding regeneration after save.
 	 *
 	 * @param int $post_id Post ID.
 	 * @return void
@@ -46,8 +63,38 @@ class PTAI_Embeddings {
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return;
 		}
-		$settings = new PTAI_Settings();
-		if ( ! $settings->is_ai_enabled() ) {
+		if ( ! PTAI_Settings::is_ai_enabled() ) {
+			return;
+		}
+
+		$post_id = (int) $post_id;
+		// wp_schedule_single_event de-duplicates same (hook,args) within
+		// a ~10-minute window, so repeat saves coalesce into one job.
+		if ( ! wp_next_scheduled( self::CRON_HOOK, array( $post_id ) ) ) {
+			wp_schedule_single_event( time() + 5, self::CRON_HOOK, array( $post_id ) );
+		}
+	}
+
+	/**
+	 * Cron callback: do the actual OpenAI call and persist the vector.
+	 *
+	 * Runs outside the admin request so a slow API never blocks saves.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return void
+	 */
+	public function process_embedding_job( $post_id ) {
+		$post_id = (int) $post_id;
+		if ( $post_id < 1 ) {
+			return;
+		}
+		if ( PTAI_CPT !== get_post_type( $post_id ) ) {
+			return;
+		}
+		if ( 'publish' !== get_post_status( $post_id ) ) {
+			return;
+		}
+		if ( ! PTAI_Settings::is_ai_enabled() ) {
 			return;
 		}
 
@@ -65,20 +112,7 @@ class PTAI_Embeddings {
 		}
 
 		$this->store_embedding( $post_id, $embedding );
-
-		update_post_meta(
-			$post_id,
-			self::META_KEY_INFO,
-			wp_json_encode(
-				array(
-					'model'         => PTAI_OpenAI::EMBEDDING_MODEL,
-					'dims'          => count( $embedding ),
-					'generated_at'  => current_time( 'mysql' ),
-					'source_length' => strlen( $text ),
-					'source_fields' => $this->get_source_fields( $post_id ),
-				)
-			)
-		);
+		$this->write_info( $post_id, $embedding, $text );
 	}
 
 	/**
@@ -173,10 +207,34 @@ class PTAI_Embeddings {
 	}
 
 	/**
-	 * Public entry point for explicit regeneration.
+	 * Write the embedding info blob (model, dims, timestamp, etc.).
 	 *
-	 * Skips post-status / autosave / revision checks — admins may force a
-	 * regen on draft or non-current posts.
+	 * @param int               $post_id   Post ID.
+	 * @param array<int,float>  $embedding Vector.
+	 * @param string            $text      Source text used.
+	 * @return void
+	 */
+	private function write_info( $post_id, array $embedding, $text ) {
+		update_post_meta(
+			$post_id,
+			self::META_KEY_INFO,
+			wp_json_encode(
+				array(
+					'model'         => PTAI_OpenAI::EMBEDDING_MODEL,
+					'dims'          => count( $embedding ),
+					'generated_at'  => current_time( 'mysql' ),
+					'source_length' => strlen( $text ),
+					'source_fields' => $this->get_source_fields( $post_id ),
+				)
+			)
+		);
+	}
+
+	/**
+	 * Public entry point for explicit regeneration. Synchronous.
+	 *
+	 * Used by the admin "Regenerate Embedding" row action — admins
+	 * expect immediate feedback when they click the link.
 	 *
 	 * @param int $post_id Post ID.
 	 * @return bool True on success.
@@ -185,8 +243,7 @@ class PTAI_Embeddings {
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return false;
 		}
-		$settings = new PTAI_Settings();
-		if ( ! $settings->is_ai_enabled() ) {
+		if ( ! PTAI_Settings::is_ai_enabled() ) {
 			return false;
 		}
 
@@ -208,25 +265,17 @@ class PTAI_Embeddings {
 			return false;
 		}
 
-		update_post_meta(
-			$post_id,
-			self::META_KEY_INFO,
-			wp_json_encode(
-				array(
-					'model'         => PTAI_OpenAI::EMBEDDING_MODEL,
-					'dims'          => count( $embedding ),
-					'generated_at'  => current_time( 'mysql' ),
-					'source_length' => strlen( $text ),
-					'source_fields' => $this->get_source_fields( $post_id ),
-				)
-			)
-		);
+		$this->write_info( $post_id, $embedding, $text );
 
 		return true;
 	}
 
 	/**
 	 * Persist an embedding vector to post meta.
+	 *
+	 * update_post_meta() returns false both on error and when the new
+	 * value is identical to the old one — treat the no-op case as success
+	 * so unchanged regenerations don't report a fake failure.
 	 *
 	 * @param int               $post_id   Post ID.
 	 * @param array<int,float>  $embedding Vector.
@@ -236,6 +285,10 @@ class PTAI_Embeddings {
 		$encoded = wp_json_encode( $embedding );
 		if ( ! $encoded || '' === $encoded ) {
 			return false;
+		}
+		$existing = get_post_meta( $post_id, self::META_KEY, true );
+		if ( is_string( $existing ) && $existing === $encoded ) {
+			return true;
 		}
 		return false !== update_post_meta( $post_id, self::META_KEY, $encoded );
 	}
@@ -293,6 +346,8 @@ class PTAI_Embeddings {
 			return;
 		}
 		$this->delete_embedding( $post_id );
+		// Drop any pending cron job for this post.
+		wp_clear_scheduled_hook( self::CRON_HOOK, array( (int) $post_id ) );
 	}
 
 	/**
@@ -302,8 +357,12 @@ class PTAI_Embeddings {
 	 * @return string One of 'disabled' | 'missing' | 'stale' | 'current'.
 	 */
 	public function get_embedding_status( $post_id ) {
-		$settings = new PTAI_Settings();
-		if ( ! $settings->is_ai_enabled() ) {
+		// Treat a tripped circuit breaker as disabled — the UI shouldn't
+		// offer actions that will hit a known-bad key.
+		if ( get_option( 'ptai_openai_auth_failed' ) ) {
+			return 'disabled';
+		}
+		if ( ! PTAI_Settings::is_ai_enabled() ) {
 			return 'disabled';
 		}
 		if ( ! $this->embedding_exists( $post_id ) ) {

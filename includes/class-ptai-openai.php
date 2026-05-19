@@ -113,14 +113,19 @@ class PTAI_OpenAI {
 			return false;
 		}
 
-		$code    = wp_remote_retrieve_response_code( $response );
+		$code = wp_remote_retrieve_response_code( $response );
+
+		// Check 401 before requiring a decodable body — a rejected key
+		// with an empty/malformed response must still trip the breaker.
+		if ( 401 === (int) $code ) {
+			$this->trigger_circuit_breaker();
+			return false;
+		}
+
 		$decoded = $this->handle_response( $response );
 
 		if ( false === $decoded ) {
-			return false;
-		}
-		if ( 401 === (int) $code ) {
-			$this->trigger_circuit_breaker();
+			$this->handle_error( $response, 'get_embedding' );
 			return false;
 		}
 		if ( 200 !== (int) $code ) {
@@ -208,14 +213,19 @@ class PTAI_OpenAI {
 			return false;
 		}
 
-		$code    = wp_remote_retrieve_response_code( $response );
+		$code = wp_remote_retrieve_response_code( $response );
+
+		// Check 401 before requiring a decodable body — a rejected key
+		// with an empty/malformed response must still trip the breaker.
+		if ( 401 === (int) $code ) {
+			$this->trigger_circuit_breaker();
+			return false;
+		}
+
 		$decoded = $this->handle_response( $response );
 
 		if ( false === $decoded ) {
-			return false;
-		}
-		if ( 401 === (int) $code ) {
-			$this->trigger_circuit_breaker();
+			$this->handle_error( $response, 'chat_completion' );
 			return false;
 		}
 		if ( 200 !== (int) $code ) {

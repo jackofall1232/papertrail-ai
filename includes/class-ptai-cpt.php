@@ -234,7 +234,7 @@ class PTAI_CPT {
 			'_ptai_doc_summary',
 			array(
 				'type'              => 'string',
-				'description'       => 'Document summary used as AI embedding source.',
+				'description'       => __( 'Document summary used as AI embedding source.', 'papertrail-ai' ),
 				'single'            => true,
 				'sanitize_callback' => 'sanitize_textarea_field',
 				'auth_callback'     => function () {

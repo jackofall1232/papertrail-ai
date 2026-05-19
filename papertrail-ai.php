@@ -159,7 +159,8 @@ function ptai_bootstrap() {
 		new PTAI_CPT();
 	}
 	if ( class_exists( 'PTAI_Embeddings' ) ) {
-		new PTAI_Embeddings();
+		$ptai_embeddings = new PTAI_Embeddings();
+		$ptai_embeddings->init();
 	}
 	if ( is_admin() ) {
 		if ( class_exists( 'PTAI_Settings' ) ) {

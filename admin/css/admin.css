@@ -14,29 +14,23 @@
 
 /* 1. Layout
 ------------------------------------------------------------- */
-.ptai-settings-wrap {
-    display: flex;
-    gap: 20px;
-    margin-top: 20px;
-}
-.ptai-settings-main  { flex: 1; min-width: 0; }
-.ptai-settings-sidebar { width: 280px; flex-shrink: 0; }
-
+/* .ptai-settings-wrap is on the outer <div class="wrap"> which also
+   contains the page heading and admin notices. Flex layout must be
+   scoped to .ptai-settings-layout so those elements still stack. */
 .ptai-settings-layout {
     display: flex;
     gap: 24px;
     align-items: flex-start;
     flex-wrap: wrap;
+    margin-top: 20px;
 }
 .ptai-settings-layout .ptai-settings-main {
     flex: 1 1 600px;
     min-width: 320px;
-    width: auto;
 }
 .ptai-settings-layout .ptai-settings-sidebar {
     flex: 0 1 320px;
     min-width: 280px;
-    width: auto;
 }
 
 /* 2. Settings page
