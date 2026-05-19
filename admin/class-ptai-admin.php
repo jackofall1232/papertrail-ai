@@ -597,6 +597,16 @@ class PTAI_Admin {
 						aria-hidden="true"></span>
 					<?php esc_html_e( 'Advanced', 'papertrail-ai' ); ?>
 				</button>
+				<button class="ptai-tab-btn"
+						id="tab-btn-help"
+						role="tab"
+						aria-selected="false"
+						aria-controls="ptai-tab-help"
+						data-tab="ptai-tab-help">
+					<span class="dashicons dashicons-editor-help"
+						aria-hidden="true"></span>
+					<?php esc_html_e( 'How to Use', 'papertrail-ai' ); ?>
+				</button>
 			</nav>
 
 			<!-- Main layout -->
@@ -609,6 +619,12 @@ class PTAI_Admin {
 						submit_button();
 						?>
 					</form>
+					<div id="ptai-tab-help"
+						class="ptai-tab-panel"
+						role="tabpanel"
+						aria-labelledby="tab-btn-help">
+						<?php $this->render_help_tab(); ?>
+					</div>
 				</div>
 				<div class="ptai-settings-sidebar">
 					<?php
@@ -621,6 +637,246 @@ class PTAI_Admin {
 			</div>
 
 		</div>
+		<?php
+	}
+
+	/**
+	 * Render the "How to Use" help tab.
+	 *
+	 * Pure static documentation — no form elements, no nonces.
+	 *
+	 * @return void
+	 */
+	private function render_help_tab() {
+		?>
+		<div class="ptai-help">
+
+			<!-- Getting Started -->
+			<div class="ptai-help__section">
+				<h2 class="ptai-help__heading">
+					<span class="dashicons dashicons-rocket"
+						aria-hidden="true"></span>
+					<?php esc_html_e( 'Getting Started', 'papertrail-ai' ); ?>
+				</h2>
+				<ol class="ptai-help__steps">
+					<li>
+						<strong><?php esc_html_e( 'Add a document', 'papertrail-ai' ); ?></strong>
+						<p><?php esc_html_e(
+							'Go to PaperTrail → Add New. Give your document a title, attach a file using the File Details meta box, and assign a category.',
+							'papertrail-ai'
+						); ?></p>
+					</li>
+					<li>
+						<strong><?php esc_html_e( 'Write an AI Search Summary', 'papertrail-ai' ); ?></strong>
+						<p><?php esc_html_e(
+							'Fill in the AI Search Summary field with 1–3 sentences describing the document content, date, and topic. This is what AI search uses to understand your document.',
+							'papertrail-ai'
+						); ?></p>
+					</li>
+					<li>
+						<strong><?php esc_html_e( 'Enable AI search (optional)', 'papertrail-ai' ); ?></strong>
+						<p><?php
+						printf(
+							wp_kses(
+								/* translators: %s: settings tab link */
+								__( 'Add your OpenAI API key in the <a href="%s">AI Configuration tab</a>. The plugin works fully without it using keyword search.', 'papertrail-ai' ),
+								array( 'a' => array( 'href' => array() ) )
+							),
+							esc_url( admin_url( 'edit.php?post_type=' . PTAI_CPT . '&page=' . self::SETTINGS_PAGE_SLUG ) )
+						);
+						?></p>
+					</li>
+					<li>
+						<strong><?php esc_html_e( 'Embed your library', 'papertrail-ai' ); ?></strong>
+						<p><?php esc_html_e(
+							'Use the shortcode or Gutenberg block on any page or post to display your document library.',
+							'papertrail-ai'
+						); ?></p>
+					</li>
+				</ol>
+			</div>
+
+			<!-- Shortcode Reference -->
+			<div class="ptai-help__section">
+				<h2 class="ptai-help__heading">
+					<span class="dashicons dashicons-shortcode"
+						aria-hidden="true"></span>
+					<?php esc_html_e( 'Shortcode Reference', 'papertrail-ai' ); ?>
+				</h2>
+				<p><?php esc_html_e(
+					'Use the [papertrail] shortcode on any page or post.',
+					'papertrail-ai'
+				); ?></p>
+
+				<table class="ptai-help__table widefat">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Attribute', 'papertrail-ai' ); ?></th>
+							<th><?php esc_html_e( 'Default', 'papertrail-ai' ); ?></th>
+							<th><?php esc_html_e( 'Description', 'papertrail-ai' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td><code>category</code></td>
+							<td><code>""</code></td>
+							<td><?php esc_html_e( 'Category slug or term ID to filter results.', 'papertrail-ai' ); ?></td>
+						</tr>
+						<tr>
+							<td><code>per_page</code></td>
+							<td><code>10</code></td>
+							<td><?php esc_html_e( 'Number of documents per page (1–50).', 'papertrail-ai' ); ?></td>
+						</tr>
+						<tr>
+							<td><code>columns</code></td>
+							<td><code>1</code></td>
+							<td><?php esc_html_e( 'Display in 1 or 2 columns.', 'papertrail-ai' ); ?></td>
+						</tr>
+						<tr>
+							<td><code>show_search</code></td>
+							<td><code>true</code></td>
+							<td><?php esc_html_e( 'Show or hide the search bar.', 'papertrail-ai' ); ?></td>
+						</tr>
+						<tr>
+							<td><code>mode</code></td>
+							<td><code>auto</code></td>
+							<td><?php esc_html_e( 'Search mode: auto, ai, or core. Auto uses AI when configured, falls back to keyword search.', 'papertrail-ai' ); ?></td>
+						</tr>
+						<tr>
+							<td><code>orderby</code></td>
+							<td><code>date</code></td>
+							<td><?php esc_html_e( 'Sort by: date, title, or downloads.', 'papertrail-ai' ); ?></td>
+						</tr>
+						<tr>
+							<td><code>order</code></td>
+							<td><code>DESC</code></td>
+							<td><?php esc_html_e( 'Sort direction: DESC or ASC.', 'papertrail-ai' ); ?></td>
+						</tr>
+					</tbody>
+				</table>
+
+				<!-- Code examples -->
+				<div class="ptai-help__examples">
+					<p class="ptai-help__example-label">
+						<?php esc_html_e( 'Examples:', 'papertrail-ai' ); ?>
+					</p>
+					<div class="ptai-help__code-block">
+						<code>[papertrail]</code>
+						<span class="ptai-help__code-note">
+							<?php esc_html_e( '— Show all documents', 'papertrail-ai' ); ?>
+						</span>
+					</div>
+					<div class="ptai-help__code-block">
+						<code>[papertrail category="newsletters" per_page="20" columns="2"]</code>
+						<span class="ptai-help__code-note">
+							<?php esc_html_e( '— Newsletters in 2-column grid', 'papertrail-ai' ); ?>
+						</span>
+					</div>
+					<div class="ptai-help__code-block">
+						<code>[papertrail mode="core" show_search="false"]</code>
+						<span class="ptai-help__code-note">
+							<?php esc_html_e( '— Keyword search, no search bar', 'papertrail-ai' ); ?>
+						</span>
+					</div>
+				</div>
+			</div>
+
+			<!-- AI Search Explained -->
+			<div class="ptai-help__section">
+				<h2 class="ptai-help__heading">
+					<span class="dashicons dashicons-superhero-alt"
+						aria-hidden="true"></span>
+					<?php esc_html_e( 'How AI Search Works', 'papertrail-ai' ); ?>
+				</h2>
+				<p><?php esc_html_e(
+					'AI search uses OpenAI embeddings to find documents by meaning rather than exact keywords. A visitor searching for "quarterly financial results" will find documents about "Q3 earnings report" even if those words do not match.',
+					'papertrail-ai'
+				); ?></p>
+				<h3 class="ptai-help__subheading">
+					<?php esc_html_e( 'What gets embedded', 'papertrail-ai' ); ?>
+				</h3>
+				<ul class="ptai-help__list">
+					<li><?php esc_html_e( 'Document title', 'papertrail-ai' ); ?></li>
+					<li><?php esc_html_e( 'Post excerpt', 'papertrail-ai' ); ?></li>
+					<li><?php esc_html_e( 'AI Search Summary field (most important)', 'papertrail-ai' ); ?></li>
+					<li><?php esc_html_e( 'Category names', 'papertrail-ai' ); ?></li>
+				</ul>
+				<h3 class="ptai-help__subheading">
+					<?php esc_html_e( 'Embedding status badges', 'papertrail-ai' ); ?>
+				</h3>
+				<ul class="ptai-help__badge-legend">
+					<li>
+						<span class="ptai-status-badge ptai-status-badge--current">
+							<?php esc_html_e( 'Embedding current', 'papertrail-ai' ); ?>
+						</span>
+						<?php esc_html_e( '— Document is indexed and ready.', 'papertrail-ai' ); ?>
+					</li>
+					<li>
+						<span class="ptai-status-badge ptai-status-badge--stale">
+							<?php esc_html_e( 'Embedding stale', 'papertrail-ai' ); ?>
+						</span>
+						<?php esc_html_e( '— Document was edited since last index. Will update automatically on next save.', 'papertrail-ai' ); ?>
+					</li>
+					<li>
+						<span class="ptai-status-badge ptai-status-badge--missing">
+							<?php esc_html_e( 'No embedding', 'papertrail-ai' ); ?>
+						</span>
+						<?php esc_html_e( '— Not yet indexed. Save the document or use Regenerate Embedding.', 'papertrail-ai' ); ?>
+					</li>
+				</ul>
+				<p class="ptai-help__note">
+					<span class="dashicons dashicons-info-outline"
+						aria-hidden="true"></span>
+					<?php esc_html_e(
+						'API cost note: PaperTrail AI uses text-embedding-3-small — one of OpenAI\'s most affordable models. Indexing a typical document summary costs a fraction of a cent.',
+						'papertrail-ai'
+					); ?>
+				</p>
+			</div>
+
+			<!-- Download Tracking -->
+			<div class="ptai-help__section">
+				<h2 class="ptai-help__heading">
+					<span class="dashicons dashicons-download"
+						aria-hidden="true"></span>
+					<?php esc_html_e( 'Download Tracking', 'papertrail-ai' ); ?>
+				</h2>
+				<p><?php esc_html_e(
+					'Every file download is routed through a WordPress REST endpoint which increments the download counter before serving the file. Counts are rate-limited to one per document per hour using a hashed token — no IP addresses or personal data are stored.',
+					'papertrail-ai'
+				); ?></p>
+				<p><?php esc_html_e(
+					'Download counts appear in the Documents list table and are sortable. Use them to identify your most popular documents and retire unused ones.',
+					'papertrail-ai'
+				); ?></p>
+			</div>
+
+			<!-- Need More -->
+			<div class="ptai-help__section ptai-help__section--cta">
+				<h2 class="ptai-help__heading">
+					<span class="dashicons dashicons-external"
+						aria-hidden="true"></span>
+					<?php esc_html_e( 'Need More?', 'papertrail-ai' ); ?>
+				</h2>
+				<p><?php esc_html_e(
+					'PaperTrail AI is part of the Ask Adam suite. Ask Adam Pro adds conversational document Q&A, multi-document context retrieval, bulk indexing, analytics, and priority support.',
+					'papertrail-ai'
+				); ?></p>
+				<a href="<?php echo esc_url( 'https://askadamit.com/purchase' ); ?>"
+					class="button button-primary ptai-help__cta-btn"
+					target="_blank"
+					rel="noopener noreferrer">
+					<?php esc_html_e( 'Learn about Ask Adam Pro', 'papertrail-ai' ); ?>
+				</a>
+				<a href="<?php echo esc_url( 'https://askadamit.com' ); ?>"
+					class="button ptai-help__cta-btn"
+					target="_blank"
+					rel="noopener noreferrer">
+					<?php esc_html_e( 'Visit askadamit.com', 'papertrail-ai' ); ?>
+				</a>
+			</div>
+
+		</div><!-- .ptai-help -->
 		<?php
 	}
 

@@ -110,12 +110,14 @@
 			return;
 		}
 
-		var $headings = $form.children( 'h2' );
+		var $headings      = $form.children( 'h2' );
+		var $staticPanels  = $wrap.find( '.ptai-tab-panel' );
 
-		// If section count differs from tab count (e.g. another plugin
-		// injected a settings section), bail out: nav stays hidden via
-		// CSS and the form renders flat.
-		if ( $headings.length !== $tabBtns.length ) {
+		// If the count of form-generated sections plus any pre-existing
+		// static panels doesn't equal the number of tab buttons (e.g.
+		// another plugin injected a settings section), bail out: the nav
+		// stays hidden via CSS and the form renders flat.
+		if ( $headings.length + $staticPanels.length !== $tabBtns.length ) {
 			return;
 		}
 
@@ -178,9 +180,9 @@
 				.attr( 'aria-selected', 'true' )
 				.attr( 'tabindex', '0' );
 
-			$form.find( '.ptai-tab-panel' )
+			$wrap.find( '.ptai-tab-panel' )
 				.removeClass( 'ptai-tab-panel--active' );
-			$form.find( '#' + target )
+			$wrap.find( '#' + target )
 				.addClass( 'ptai-tab-panel--active' );
 
 			if ( focus ) {
