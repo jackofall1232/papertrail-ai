@@ -75,7 +75,7 @@ class PTAI_Loader {
 		$this->settings       = new PTAI_Settings();
 		$this->embeddings     = new PTAI_Embeddings();
 		$this->shortcode      = new PTAI_Shortcode();
-		$this->block          = new PTAI_Block();
+		$this->block          = new PTAI_Block( $this->shortcode );
 		$this->public_handler = new PTAI_Public();
 		if ( is_admin() ) {
 			$this->admin = new PTAI_Admin();
@@ -128,16 +128,27 @@ class PTAI_Loader {
 			return;
 		}
 
+		// Always-on: hooks that may legitimately fire during admin-ajax
+		// or REST flows (post saves, query modifications, settings sync).
+		add_action( 'save_post_' . PTAI_CPT, array( $this->admin, 'save_meta_box' ) );
+		add_action( 'pre_get_posts', array( $this->admin, 'handle_sortable_columns_query' ) );
+		add_action( 'admin_init', array( $this->settings, 'register_settings' ) );
+
+		// Screen-output hooks — useless during admin-ajax.php since
+		// nothing renders. Skipping them in AJAX shaves a few callbacks
+		// off every admin AJAX request.
+		if ( wp_doing_ajax() ) {
+			return;
+		}
+
 		add_action( 'admin_menu', array( $this->admin, 'register_settings_page' ) );
 		add_action( 'admin_enqueue_scripts', array( $this->admin, 'enqueue_styles' ) );
 		add_action( 'admin_enqueue_scripts', array( $this->admin, 'enqueue_scripts' ) );
 		add_action( 'add_meta_boxes_' . PTAI_CPT, array( $this->admin, 'add_meta_boxes' ) );
-		add_action( 'save_post_' . PTAI_CPT, array( $this->admin, 'save_meta_box' ) );
 
 		add_filter( 'manage_' . PTAI_CPT . '_posts_columns', array( $this->admin, 'add_admin_columns' ) );
 		add_action( 'manage_' . PTAI_CPT . '_posts_custom_column', array( $this->admin, 'populate_admin_column' ), 10, 2 );
 		add_filter( 'manage_edit-' . PTAI_CPT . '_sortable_columns', array( $this->admin, 'make_admin_columns_sortable' ) );
-		add_action( 'pre_get_posts', array( $this->admin, 'handle_sortable_columns_query' ) );
 
 		add_filter( 'plugin_action_links_' . PTAI_PLUGIN_BASENAME, array( $this->admin, 'add_plugin_action_links' ) );
 
@@ -148,9 +159,6 @@ class PTAI_Loader {
 
 		add_filter( 'bulk_actions-edit-' . PTAI_CPT, array( $this->admin, 'add_bulk_actions' ) );
 		add_filter( 'handle_bulk_actions-edit-' . PTAI_CPT, array( $this->admin, 'handle_bulk_action' ), 10, 3 );
-
-		// Settings registration.
-		add_action( 'admin_init', array( $this->settings, 'register_settings' ) );
 	}
 
 	/**

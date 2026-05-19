@@ -59,7 +59,7 @@ Any file type your WordPress media library accepts can be attached to a PaperTra
 
 = Is PaperTrail AI available in my language? =
 
-PaperTrail AI is translation-ready. A .pot file is included in the languages/ folder. If you would like to contribute a translation, please contact us at askadamit.com.
+PaperTrail AI is translation-ready. A .pot file is included in the languages/ folder. If you would like to contribute a translation, please get in touch via https://askadamit.com/contact.
 
 == Changelog ==
 

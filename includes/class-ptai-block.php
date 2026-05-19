@@ -26,10 +26,25 @@ class PTAI_Block {
 	const BLOCK_NAME = 'papertrail-ai/library';
 
 	/**
-	 * Constructor. Intentionally side-effect-free — registration is hooked
-	 * in PTAI_Loader::define_core_hooks().
+	 * Shortcode renderer used to produce the dynamic block output.
+	 *
+	 * @var PTAI_Shortcode
 	 */
-	public function __construct() {}
+	private $shortcode;
+
+	/**
+	 * Constructor. Intentionally side-effect-free — registration is hooked
+	 * in PTAI_Loader::define_core_hooks(). The shortcode dependency is
+	 * injected so render_callback() doesn't allocate a new instance per
+	 * block render.
+	 *
+	 * @param PTAI_Shortcode|null $shortcode Optional shortcode renderer.
+	 */
+	public function __construct( $shortcode = null ) {
+		if ( $shortcode instanceof PTAI_Shortcode ) {
+			$this->shortcode = $shortcode;
+		}
+	}
 
 	/**
 	 * Register the block type from its directory (block.json metadata).
@@ -84,7 +99,7 @@ class PTAI_Block {
 				: 'auto',
 		);
 
-		$shortcode = new PTAI_Shortcode();
+		$shortcode = isset( $this->shortcode ) ? $this->shortcode : new PTAI_Shortcode();
 		return $shortcode->render( $atts, '' );
 	}
 }
