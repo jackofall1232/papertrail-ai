@@ -527,13 +527,12 @@ class PTAI_Admin {
 			return;
 		}
 		?>
-		<div class="wrap ptai-settings-wrap">
+		<div class="wrap ptai-settings-wrap ptai-no-js">
 
-			<!-- Hero / branded header -->
 			<div class="ptai-admin-hero">
 				<div class="ptai-admin-hero__inner">
 					<div class="ptai-admin-hero__icon" aria-hidden="true">
-						<span class="dashicons dashicons-media-document"></span>
+						<span class="dashicons dashicons-clipboard"></span>
 					</div>
 					<div class="ptai-admin-hero__text">
 						<h1 class="ptai-admin-hero__title">
@@ -556,45 +555,42 @@ class PTAI_Admin {
 
 			<?php settings_errors(); ?>
 
-			<!-- Tab navigation -->
 			<nav class="ptai-tab-nav" role="tablist"
-				aria-label="<?php esc_attr_e(
-					'Settings sections', 'papertrail-ai'
-				); ?>">
+				aria-label="<?php esc_attr_e( 'Settings sections', 'papertrail-ai' ); ?>">
 				<button class="ptai-tab-btn ptai-tab-btn--active"
+						id="tab-btn-ai"
 						role="tab"
 						aria-selected="true"
 						aria-controls="ptai-tab-ai"
 						data-tab="ptai-tab-ai">
-					<span class="dashicons dashicons-superhero-alt"
-						aria-hidden="true"></span>
+					<span class="dashicons dashicons-superhero-alt" aria-hidden="true"></span>
 					<?php esc_html_e( 'AI Configuration', 'papertrail-ai' ); ?>
 				</button>
 				<button class="ptai-tab-btn"
+						id="tab-btn-uploads"
 						role="tab"
 						aria-selected="false"
 						aria-controls="ptai-tab-uploads"
 						data-tab="ptai-tab-uploads">
-					<span class="dashicons dashicons-upload"
-						aria-hidden="true"></span>
+					<span class="dashicons dashicons-upload" aria-hidden="true"></span>
 					<?php esc_html_e( 'Upload Settings', 'papertrail-ai' ); ?>
 				</button>
 				<button class="ptai-tab-btn"
+						id="tab-btn-access"
 						role="tab"
 						aria-selected="false"
 						aria-controls="ptai-tab-access"
 						data-tab="ptai-tab-access">
-					<span class="dashicons dashicons-groups"
-						aria-hidden="true"></span>
+					<span class="dashicons dashicons-groups" aria-hidden="true"></span>
 					<?php esc_html_e( 'Access Control', 'papertrail-ai' ); ?>
 				</button>
 				<button class="ptai-tab-btn"
+						id="tab-btn-advanced"
 						role="tab"
 						aria-selected="false"
 						aria-controls="ptai-tab-advanced"
 						data-tab="ptai-tab-advanced">
-					<span class="dashicons dashicons-admin-tools"
-						aria-hidden="true"></span>
+					<span class="dashicons dashicons-admin-tools" aria-hidden="true"></span>
 					<?php esc_html_e( 'Advanced', 'papertrail-ai' ); ?>
 				</button>
 				<button class="ptai-tab-btn"
@@ -603,28 +599,104 @@ class PTAI_Admin {
 						aria-selected="false"
 						aria-controls="ptai-tab-help"
 						data-tab="ptai-tab-help">
-					<span class="dashicons dashicons-editor-help"
-						aria-hidden="true"></span>
+					<span class="dashicons dashicons-editor-help" aria-hidden="true"></span>
 					<?php esc_html_e( 'How to Use', 'papertrail-ai' ); ?>
 				</button>
 			</nav>
 
-			<!-- Main layout -->
 			<div class="ptai-settings-layout">
 				<div class="ptai-settings-main">
+
 					<form method="post" action="options.php">
 						<?php
 						settings_fields( PTAI_Settings::SETTINGS_GROUP );
-						do_settings_sections( PTAI_Settings::PAGE_SLUG );
-						submit_button();
+
+						global $wp_settings_sections;
+						$page_sections = isset( $wp_settings_sections[ PTAI_Settings::PAGE_SLUG ] )
+							? $wp_settings_sections[ PTAI_Settings::PAGE_SLUG ]
+							: array();
+
+						$sections = array(
+							'ptai-tab-ai'       => 'ptai_section_ai',
+							'ptai-tab-uploads'  => 'ptai_section_uploads',
+							'ptai-tab-access'   => 'ptai_section_access',
+							'ptai-tab-advanced' => 'ptai_section_advanced',
+						);
+
+						$first = true;
+						foreach ( $sections as $tab_id => $section_id ) {
+							$btn_id = str_replace( 'ptai-tab-', 'tab-btn-', $tab_id );
+							$active = $first ? ' ptai-tab-panel--active' : '';
+							?>
+							<div id="<?php echo esc_attr( $tab_id ); ?>"
+								class="ptai-tab-panel<?php echo esc_attr( $active ); ?>"
+								role="tabpanel"
+								aria-labelledby="<?php echo esc_attr( $btn_id ); ?>">
+								<?php
+								// Render the section description callback (the section
+								// title is intentionally omitted — the tab button is
+								// the section heading). do_settings_fields() below
+								// only outputs the field <tr> rows, so without this
+								// the descriptions registered via add_settings_section
+								// would silently disappear.
+								if ( isset( $page_sections[ $section_id ]['callback'] )
+									&& is_callable( $page_sections[ $section_id ]['callback'] ) ) {
+									call_user_func(
+										$page_sections[ $section_id ]['callback'],
+										$page_sections[ $section_id ]
+									);
+								}
+								?>
+								<table class="form-table" role="presentation">
+									<tbody>
+										<?php
+										do_settings_fields(
+											PTAI_Settings::PAGE_SLUG,
+											$section_id
+										);
+										?>
+									</tbody>
+								</table>
+							</div>
+							<?php
+							$first = false;
+						}
+
+						// Render any extra sections registered by add-ons or site
+						// code against this page slug that aren't part of our tab
+						// layout. They appear as flat blocks below the tab panels
+						// so their UI stays reachable instead of silently
+						// disappearing. Mirrors do_settings_sections() output.
+						$known_section_ids = array_values( $sections );
+						foreach ( $page_sections as $section ) {
+							if ( ! is_array( $section ) || empty( $section['id'] ) ) {
+								continue;
+							}
+							if ( in_array( $section['id'], $known_section_ids, true ) ) {
+								continue;
+							}
+							if ( ! empty( $section['title'] ) ) {
+								echo '<h2>' . esc_html( $section['title'] ) . '</h2>';
+							}
+							if ( ! empty( $section['callback'] ) && is_callable( $section['callback'] ) ) {
+								call_user_func( $section['callback'], $section );
+							}
+							echo '<table class="form-table" role="presentation"><tbody>';
+							do_settings_fields( PTAI_Settings::PAGE_SLUG, $section['id'] );
+							echo '</tbody></table>';
+						}
 						?>
+
+						<?php submit_button(); ?>
 					</form>
+
 					<div id="ptai-tab-help"
 						class="ptai-tab-panel"
 						role="tabpanel"
 						aria-labelledby="tab-btn-help">
 						<?php $this->render_help_tab(); ?>
 					</div>
+
 				</div>
 				<div class="ptai-settings-sidebar">
 					<?php

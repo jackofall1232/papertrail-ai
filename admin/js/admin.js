@@ -102,125 +102,106 @@
 	/* 4. Settings page tabs
 	--------------------------------------------------------- */
 	$( function () {
-		var $wrap    = $( '.ptai-settings-wrap' );
-		var $tabNav  = $wrap.find( '.ptai-tab-nav' );
-		var $form    = $wrap.find( '.ptai-settings-main form' );
-		var $tabBtns = $tabNav.find( '.ptai-tab-btn' );
-		if ( ! $tabNav.length || ! $form.length || ! $tabBtns.length ) {
-			return;
-		}
+		( function initTabs() {
+			var $wrap   = $( '.ptai-settings-wrap' );
+			var $nav    = $wrap.find( '.ptai-tab-nav' );
+			var $panels = $wrap.find( '.ptai-tab-panel' );
+			var $btns   = $nav.find( '.ptai-tab-btn' );
 
-		var $headings      = $form.children( 'h2' );
-		var $staticPanels  = $wrap.find( '.ptai-tab-panel' );
-
-		// If the count of form-generated sections plus any pre-existing
-		// static panels doesn't equal the number of tab buttons (e.g.
-		// another plugin injected a settings section), bail out: the nav
-		// stays hidden via CSS and the form renders flat.
-		if ( $headings.length + $staticPanels.length !== $tabBtns.length ) {
-			return;
-		}
-
-		// Wrap each section heading + its following siblings (up to the
-		// next h2 or the .submit row) into a tab panel whose id matches
-		// the corresponding tab button's data-tab. The .submit row is
-		// intentionally left outside so the save button stays visible.
-		$headings.each( function ( i ) {
-			var $btn   = $tabBtns.eq( i );
-			var tabId  = $btn.data( 'tab' );
-			if ( ! tabId ) {
+			if ( ! $nav.length || ! $panels.length || ! $btns.length ) {
 				return;
 			}
 
-			var $h     = $( this );
-			var $group = $h.nextUntil( 'h2, .submit' );
-
-			// Give the button a stable id so aria-labelledby can point at it.
-			var btnId = $btn.attr( 'id' );
-			if ( ! btnId ) {
-				btnId = tabId + '-tab';
-				$btn.attr( 'id', btnId );
-			}
-
-			var $panel = $( '<div></div>' )
-				.attr( 'id', tabId )
-				.attr( 'role', 'tabpanel' )
-				.attr( 'aria-labelledby', btnId )
-				.addClass( 'ptai-tab-panel' );
-
-			$h.before( $panel );
-			$panel.append( $h ).append( $group );
-
-			if ( 0 === i ) {
-				$panel.addClass( 'ptai-tab-panel--active' );
-			}
-		} );
-
-		// Roving tabindex — only the active tab is in the tab order.
-		$tabBtns.attr( 'tabindex', '-1' );
-		$tabBtns.filter( '.ptai-tab-btn--active' ).attr( 'tabindex', '0' );
-
-		// Reveal the nav now that the panels are wired up.
-		$wrap.addClass( 'ptai-tabs-ready' );
-
-		function activateTab( $btn, focus ) {
-			if ( ! $btn || ! $btn.length ) {
-				return;
-			}
-			var target = $btn.data( 'tab' );
-			if ( ! target ) {
+			// If another plugin injected an extra section the panel and
+			// button counts will diverge — bail safely so the no-JS
+			// fallback (all panels visible, nav hidden) stays in effect.
+			if ( $panels.length !== $btns.length ) {
 				return;
 			}
 
-			$tabBtns
-				.removeClass( 'ptai-tab-btn--active' )
-				.attr( 'aria-selected', 'false' )
-				.attr( 'tabindex', '-1' );
-			$btn.addClass( 'ptai-tab-btn--active' )
-				.attr( 'aria-selected', 'true' )
-				.attr( 'tabindex', '0' );
+			$wrap.removeClass( 'ptai-no-js' );
+			$wrap.addClass( 'ptai-tabs-ready' );
 
-			$wrap.find( '.ptai-tab-panel' )
-				.removeClass( 'ptai-tab-panel--active' );
-			$wrap.find( '#' + target )
-				.addClass( 'ptai-tab-panel--active' );
+			$btns.attr( 'tabindex', '-1' );
+			$btns.filter( '.ptai-tab-btn--active' ).attr( 'tabindex', '0' );
 
-			if ( focus ) {
-				$btn.trigger( 'focus' );
+			function activateTab( $btn, moveFocus ) {
+				if ( ! $btn || ! $btn.length ) {
+					return;
+				}
+				var tabId = $btn.data( 'tab' );
+				if ( ! tabId ) {
+					return;
+				}
+
+				$btns
+					.removeClass( 'ptai-tab-btn--active' )
+					.attr( 'aria-selected', 'false' )
+					.attr( 'tabindex', '-1' );
+				$btn
+					.addClass( 'ptai-tab-btn--active' )
+					.attr( 'aria-selected', 'true' )
+					.attr( 'tabindex', '0' );
+
+				$panels.removeClass( 'ptai-tab-panel--active' );
+				$wrap.find( '#' + tabId ).addClass( 'ptai-tab-panel--active' );
+
+				if ( moveFocus ) {
+					$btn.trigger( 'focus' );
+				}
+
+				try {
+					sessionStorage.setItem( 'ptai_active_tab', tabId );
+				} catch ( e ) { /* storage unavailable */ }
 			}
-		}
 
-		$tabNav.on( 'click', '.ptai-tab-btn', function ( e ) {
-			e.preventDefault();
-			activateTab( $( this ), false );
-		} );
+			$nav.on( 'click', '.ptai-tab-btn', function () {
+				activateTab( $( this ), false );
+			} );
 
-		// WAI-ARIA tablist keyboard support: Left/Right cycle, Home/End jump.
-		$tabNav.on( 'keydown', '.ptai-tab-btn', function ( e ) {
-			var key = e.key;
-			if (
-				'ArrowLeft'  !== key &&
-				'ArrowRight' !== key &&
-				'Home'       !== key &&
-				'End'        !== key
-			) {
-				return;
+			$nav.on( 'keydown', '.ptai-tab-btn', function ( e ) {
+				var key  = e.key;
+				var idx  = $btns.index( this );
+				var last = $btns.length - 1;
+				var next = -1;
+
+				if ( 'ArrowRight' === key ) {
+					next = idx === last ? 0 : idx + 1;
+				} else if ( 'ArrowLeft' === key ) {
+					next = 0 === idx ? last : idx - 1;
+				} else if ( 'Home' === key ) {
+					next = 0;
+				} else if ( 'End' === key ) {
+					next = last;
+				}
+
+				if ( next >= 0 ) {
+					e.preventDefault();
+					activateTab( $btns.eq( next ), true );
+				}
+			} );
+
+			var restored = false;
+			try {
+				var saved = sessionStorage.getItem( 'ptai_active_tab' );
+				if ( saved ) {
+					// Filter on the existing collection instead of building an
+					// attribute selector — avoids selector-injection issues if
+					// the stored value contains quotes or special characters.
+					var $target = $btns.filter( function () {
+						return $( this ).data( 'tab' ) === saved;
+					} );
+					if ( $target.length ) {
+						activateTab( $target.first(), false );
+						restored = true;
+					}
+				}
+			} catch ( e ) { /* storage unavailable */ }
+
+			if ( ! restored ) {
+				activateTab( $btns.first(), false );
 			}
-			e.preventDefault();
-			var index = $tabBtns.index( this );
-			var last  = $tabBtns.length - 1;
-			var next;
-			if ( 'ArrowLeft' === key ) {
-				next = 0 === index ? last : index - 1;
-			} else if ( 'ArrowRight' === key ) {
-				next = index === last ? 0 : index + 1;
-			} else if ( 'Home' === key ) {
-				next = 0;
-			} else {
-				next = last;
-			}
-			activateTab( $tabBtns.eq( next ), true );
-		} );
+		}() );
 	} );
 
 } ( jQuery, window.ptaiAdmin || {} ) );
