@@ -72,6 +72,17 @@ class PTAI_Admin {
 	 * @return void
 	 */
 	public function enqueue_styles( $hook ) {
+		// Global — loads on every admin page.
+		// Tiny file (3 rules) that keeps the sidebar
+		// clipboard icon teal regardless of current screen.
+		wp_enqueue_style(
+			'ptai-admin-global',
+			PTAI_PLUGIN_URL . 'admin/css/admin-global.css',
+			array(),
+			PTAI_VERSION
+		);
+
+		// Plugin screens only — full admin UI styles.
 		if ( ! $this->is_plugin_screen( $hook ) ) {
 			return;
 		}
@@ -79,7 +90,7 @@ class PTAI_Admin {
 		wp_enqueue_style(
 			'ptai-admin',
 			PTAI_PLUGIN_URL . 'admin/css/admin.css',
-			array(),
+			array( 'ptai-admin-global' ),
 			PTAI_VERSION
 		);
 	}
