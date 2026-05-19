@@ -52,6 +52,8 @@ class PTAI_Search {
 			'page'     => 1,
 			'category' => 0,
 			'mode'     => 'auto',
+			'orderby'  => 'date',
+			'order'    => 'DESC',
 		);
 		$args = is_array( $args ) ? array_merge( $defaults, $args ) : $defaults;
 
@@ -64,6 +66,18 @@ class PTAI_Search {
 			$mode = 'auto';
 		}
 		$args['mode'] = $mode;
+
+		$orderby = sanitize_key( (string) $args['orderby'] );
+		if ( ! in_array( $orderby, array( 'date', 'title', 'downloads' ), true ) ) {
+			$orderby = 'date';
+		}
+		$args['orderby'] = $orderby;
+
+		$order = strtoupper( (string) $args['order'] );
+		if ( ! in_array( $order, array( 'ASC', 'DESC' ), true ) ) {
+			$order = 'DESC';
+		}
+		$args['order'] = $order;
 
 		switch ( $mode ) {
 			case 'core':
@@ -99,10 +113,21 @@ class PTAI_Search {
 			'post_status'    => 'publish',
 			'posts_per_page' => (int) $args['per_page'],
 			'paged'          => (int) $args['page'],
+			'order'          => isset( $args['order'] ) ? (string) $args['order'] : 'DESC',
 		);
 
 		if ( '' !== $query ) {
 			$wp_args['s'] = $query;
+		}
+
+		$orderby = isset( $args['orderby'] ) ? (string) $args['orderby'] : 'date';
+		if ( 'downloads' === $orderby ) {
+			$wp_args['meta_key'] = '_ptai_download_count'; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			$wp_args['orderby']  = 'meta_value_num';
+		} elseif ( 'title' === $orderby ) {
+			$wp_args['orderby'] = 'title';
+		} else {
+			$wp_args['orderby'] = 'date';
 		}
 
 		if ( $args['category'] > 0 ) {
@@ -179,6 +204,11 @@ class PTAI_Search {
 		if ( empty( $post_ids ) ) {
 			return $this->empty_result( 'ai' );
 		}
+
+		// Prime the postmeta cache for the whole candidate pool so each
+		// PTAI_Embeddings::get_embedding() call hits the cache instead of
+		// issuing its own SELECT — turns N queries into 1.
+		update_meta_cache( 'post', $post_ids );
 
 		$embeddings = new PTAI_Embeddings();
 		$scored     = array();

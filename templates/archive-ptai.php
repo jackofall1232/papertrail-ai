@@ -131,12 +131,21 @@ $ptai_columns = isset( $ptai_columns ) ? (int) $ptai_columns : 1;
 
 		<ul class="ptai-file-list ptai-columns-<?php echo esc_attr( $ptai_columns ); ?>">
 			<?php
+			// Save and restore the global $post — the loop variable below
+			// shares the surrounding scope, and overwriting it on the
+			// standalone archive would leak the last card's post object
+			// into footer/template code that runs after this template.
+			$ptai_saved_post = isset( $GLOBALS['post'] ) ? $GLOBALS['post'] : null;
+
 			foreach ( $ptai_results['posts'] as $post ) :
 				if ( ! ( $post instanceof WP_Post ) ) {
 					continue;
 				}
 				include PTAI_PLUGIN_DIR . 'templates/partials/file-card.php';
 			endforeach;
+
+			$GLOBALS['post'] = $ptai_saved_post;
+			unset( $ptai_saved_post );
 			?>
 		</ul>
 

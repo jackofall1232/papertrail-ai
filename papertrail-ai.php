@@ -339,9 +339,10 @@ function ptai_handle_search( WP_REST_Request $request ) {
 	}
 
 	// Same hourly rate limit as the AJAX handler. Free version cap to
-	// prevent the plugin from acting as an open OpenAI proxy.
+	// prevent the plugin from acting as an open OpenAI proxy. Skip empty
+	// queries and AI-off sites so they don't consume the bucket.
 	if ( class_exists( 'PTAI_Public' ) ) {
-		$mode = PTAI_Public::apply_rate_limit( $mode );
+		$mode = PTAI_Public::apply_rate_limit( $mode, $q );
 	}
 
 	$search  = new PTAI_Search();

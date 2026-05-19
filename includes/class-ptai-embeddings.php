@@ -111,7 +111,6 @@ class PTAI_Embeddings {
 		$raw_info = get_post_meta( $post_id, self::META_KEY_INFO, true );
 		$info     = is_string( $raw_info ) ? json_decode( $raw_info, true ) : null;
 		if ( is_array( $info ) && isset( $info['source_hash'] ) && $info['source_hash'] === $new_hash ) {
-			delete_post_meta( $post_id, '_ptai_embedding_queued' );
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 					sprintf( 'PaperTrail AI: skipping embedding, source text unchanged for post %d', $post_id )

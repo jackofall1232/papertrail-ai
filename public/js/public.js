@@ -20,17 +20,16 @@
 
 	/* 1. Per-form AJAX submit handler
 	------------------------------------------------------------ */
-	// Use a delegated handler so each submission is scoped to the form
-	// that fired it. This matters when a page renders multiple
-	// [papertrail] shortcode instances — each library must search and
-	// update only its own list.
+	// Use $(this) inside the handler so each submit is scoped to the
+	// form that fired it. A page can render multiple [papertrail]
+	// libraries; each must search and update only its own list.
 	$forms.on( 'submit', function ( e ) {
-		var $form = $( this );
-		var $btn  = $form.find( '.ptai-search-btn' );
-		var $list = findListForForm( $form );
+		var $form    = $( this );
+		var $btn     = $form.find( '.ptai-search-btn' );
+		var $library = $form.closest( '.ptai-document-library' );
 
-		if ( ! $list || ! $list.length ) {
-			// Nothing JS can update — let the browser submit normally.
+		if ( ! $library.length ) {
+			// No library wrapper — let the form submit normally.
 			return;
 		}
 
@@ -42,7 +41,7 @@
 			$btn.data( 'ptai-original-text', originalBtn );
 		}
 
-		var query    = $form.find( '#ptai-search-input, .ptai-search-input' ).first().val() || '';
+		var query    = $form.find( '.ptai-search-input' ).first().val() || '';
 		var category = $form.find( '[name="ptai_category"]' ).val() || 0;
 		var mode     = $form.find( '[name="ptai_mode"]' ).val() || 'auto';
 
@@ -58,67 +57,84 @@
 		} )
 			.done( function ( response ) {
 				if ( response && response.success && response.data && response.data.posts && response.data.posts.length ) {
-					renderResults( $list, response.data.posts );
+					renderResults( $library, response.data.posts );
 				} else {
-					$list.html(
-						'<li class="ptai-no-results">' +
-						escHtml( ptaiPublic.strings.no_results ) +
-						'</li>'
-					);
+					renderEmpty( $library );
 				}
 			} )
 			.fail( function () {
-				$list.html(
-					'<li class="ptai-no-results">' +
-					escHtml( ptaiPublic.strings.error ) +
-					'</li>'
-				);
+				renderError( $library );
 			} )
 			.always( function () {
 				$btn.prop( 'disabled', false ).text( originalBtn || ptaiPublic.strings.search );
 			} );
 	} );
 
-	/* 2. Locate the result list belonging to a given form
+	/* 2. Ensure the library has a result list; remove stale state
 	------------------------------------------------------------ */
-	function findListForForm( $form ) {
-		var $library = $form.closest( '.ptai-document-library' );
-		if ( $library.length ) {
-			var $list = $library.find( '.ptai-file-list' );
-			if ( ! $list.length ) {
-				$list = $( '<ul class="ptai-file-list ptai-columns-1"></ul>' ).appendTo( $library );
-			}
-			return $list;
+	function ensureList( $library ) {
+		// Drop any pre-existing "no results" paragraph from the
+		// initial server render — otherwise it sticks around behind
+		// fresh AJAX results.
+		$library.find( '.ptai-no-results' ).remove();
+
+		// AJAX always asks for page 1, so any pagination from the
+		// initial server render no longer applies. Drop it.
+		$library.find( '.ptai-pagination' ).remove();
+
+		var $list = $library.find( '.ptai-file-list' );
+		if ( ! $list.length ) {
+			$list = $( '<ul class="ptai-file-list ptai-columns-1"></ul>' ).appendTo( $library );
 		}
-		// Form is not inside a library wrapper — no JS render target.
-		return $();
+		return $list;
 	}
 
-	/* 3. Render results into the given list
+	/* 3. Renderers
 	------------------------------------------------------------ */
-	function renderResults( $list, posts ) {
-		var html = '';
+	function renderResults( $library, posts ) {
+		var $list = ensureList( $library );
+		var html  = '';
 		$.each( posts, function ( i, post ) {
+			var downloadLink = '';
+			if ( post.has_file && post.download_url ) {
+				downloadLink =
+					'<a class="ptai-download-link" href="' + escHtml( post.download_url ) + '">' +
+						escHtml( ptaiPublic.strings.download ) +
+					'</a>';
+			}
 			html +=
 				'<li class="ptai-file-card">' +
-					'<div class="ptai-file-icon"></div>' +
+					'<div class="ptai-file-icon">' +
+						'<span class="' + escHtml( post.icon_class || 'ptai-icon-file' ) + '" aria-hidden="true"></span>' +
+					'</div>' +
 					'<div class="ptai-file-info">' +
 						'<a class="ptai-file-title" href="' + escHtml( post.permalink ) + '">' +
 							escHtml( post.title ) +
 						'</a>' +
-						'<span class="ptai-file-meta">' +
-							escHtml( post.file_type || '' ) + ' &middot; ' +
-							escHtml( post.file_size || '' ) + ' &middot; ' +
-							escHtml( String( post.downloads || 0 ) ) + ' ' +
-							escHtml( ptaiPublic.strings.download.toLowerCase() ) + 's' +
-						'</span>' +
-						'<a class="ptai-download-link" href="' + escHtml( post.download_url ) + '">' +
-							escHtml( ptaiPublic.strings.download ) +
-						'</a>' +
+						'<span class="ptai-file-meta">' + escHtml( post.meta_text || '' ) + '</span>' +
+						downloadLink +
 					'</div>' +
 				'</li>';
 		} );
 		$list.html( html );
+	}
+
+	function renderEmpty( $library ) {
+		var $list = ensureList( $library );
+		$list.html(
+			'<li class="ptai-no-results">' +
+			escHtml( ptaiPublic.strings.no_results ) +
+			'</li>'
+		);
+	}
+
+	function renderError( $library ) {
+		var $list = ensureList( $library );
+		$list.html(
+			'<li class="ptai-no-results">' +
+			escHtml( ptaiPublic.strings.error ) +
+			'</li>'
+		);
 	}
 
 	/* 4. Minimal XSS guard for JS-rendered output

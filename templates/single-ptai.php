@@ -20,13 +20,16 @@ get_header();
 		the_post();
 
 		$ptai_post_id     = get_the_ID();
+		$ptai_file_id     = absint( get_post_meta( $ptai_post_id, '_ptai_file_id', true ) );
 		$ptai_file_type   = (string) get_post_meta( $ptai_post_id, '_ptai_file_type', true );
 		$ptai_file_size   = absint( get_post_meta( $ptai_post_id, '_ptai_file_size', true ) );
 		$ptai_file_ext    = (string) get_post_meta( $ptai_post_id, '_ptai_file_ext', true );
 		$ptai_downloads   = absint( get_post_meta( $ptai_post_id, '_ptai_download_count', true ) );
 		$ptai_doc_summary = (string) get_post_meta( $ptai_post_id, '_ptai_doc_summary', true );
 
-		$ptai_download_url = get_rest_url( null, 'papertrail-ai/v1/download/' . $ptai_post_id );
+		$ptai_download_url = $ptai_file_id > 0
+			? get_rest_url( null, 'papertrail-ai/v1/download/' . $ptai_post_id )
+			: '';
 
 		// Pick a dashicon-style class hint based on MIME type.
 		$ptai_icon = 'ptai-icon-file';
@@ -74,11 +77,17 @@ get_header();
 				</span>
 			</div>
 
-			<p class="ptai-single__download">
-				<a href="<?php echo esc_url( $ptai_download_url ); ?>" class="ptai-download-btn button button-primary">
-					<?php esc_html_e( 'Download', 'papertrail-ai' ); ?>
-				</a>
-			</p>
+			<?php if ( $ptai_file_id > 0 ) : ?>
+				<p class="ptai-single__download">
+					<a href="<?php echo esc_url( $ptai_download_url ); ?>" class="ptai-download-btn button button-primary">
+						<?php esc_html_e( 'Download', 'papertrail-ai' ); ?>
+					</a>
+				</p>
+			<?php else : ?>
+				<p class="ptai-single__no-file">
+					<em><?php esc_html_e( 'No file is attached to this document.', 'papertrail-ai' ); ?></em>
+				</p>
+			<?php endif; ?>
 
 			<div class="ptai-single__content">
 				<?php the_content(); ?>

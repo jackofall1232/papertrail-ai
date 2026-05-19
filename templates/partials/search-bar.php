@@ -29,16 +29,22 @@ $ptai_search_action = get_post_type_archive_link( PTAI_CPT );
 if ( ! $ptai_search_action ) {
 	$ptai_search_action = home_url( '/' );
 }
+
+// Per-render unique input ID — multiple [papertrail] shortcodes can
+// share a page and must not collide on DOM ids.
+static $ptai_search_render_counter = 0;
+$ptai_search_render_counter++;
+$ptai_search_input_id = 'ptai-search-input-' . (int) $ptai_search_render_counter;
 ?>
 <form class="ptai-search-form" method="get" action="<?php echo esc_url( $ptai_search_action ); ?>" role="search">
 	<?php wp_nonce_field( 'ptai_search', 'ptai_search_nonce' ); ?>
 
-	<label for="ptai-search-input" class="screen-reader-text">
+	<label for="<?php echo esc_attr( $ptai_search_input_id ); ?>" class="screen-reader-text">
 		<?php esc_html_e( 'Search documents', 'papertrail-ai' ); ?>
 	</label>
 	<input
 		type="search"
-		id="ptai-search-input"
+		id="<?php echo esc_attr( $ptai_search_input_id ); ?>"
 		name="ptai_q"
 		class="ptai-search-input"
 		value="<?php echo esc_attr( $ptai_search_value ); ?>"

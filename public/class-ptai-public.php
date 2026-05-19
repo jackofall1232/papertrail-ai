@@ -149,13 +149,29 @@ class PTAI_Public {
 	 * hourly bucket is exhausted. Prevents the free plugin from becoming
 	 * an open OpenAI proxy. No PII, no IP — a single salted bucket per hour.
 	 *
-	 * @param string $mode Requested mode.
+	 * Only requests that will actually invoke OpenAI consume the bucket:
+	 * empty queries and sites without an API key both degrade to core in
+	 * PTAI_Search::ai_search(), so charging them here would needlessly
+	 * starve later real AI searches.
+	 *
+	 * @param string $mode  Requested mode.
+	 * @param string $query Search query (optional — used to skip empty searches).
 	 * @return string Effective mode after limiting.
 	 */
-	public static function apply_rate_limit( $mode ) {
+	public static function apply_rate_limit( $mode, $query = '' ) {
 		$mode = sanitize_key( (string) $mode );
 		if ( 'core' === $mode ) {
 			return 'core';
+		}
+
+		// AI not configured — no OpenAI call will happen.
+		if ( ! PTAI_Settings::is_ai_enabled() ) {
+			return $mode;
+		}
+
+		// Empty queries degrade to core inside ai_search() — no OpenAI call.
+		if ( '' === trim( (string) $query ) ) {
+			return $mode;
 		}
 
 		$window = current_time( 'Y-m-d-H' );
@@ -175,6 +191,10 @@ class PTAI_Public {
 	/**
 	 * Map a list of WP_Post objects to safe-for-JSON associative arrays.
 	 *
+	 * Returned values are *sanitized text*, not HTML-encoded — the JS
+	 * client escapes once at the DOM-insertion sink to avoid double
+	 * encoding (titles like "A & B" otherwise display as "A &amp; B").
+	 *
 	 * @param array $posts WP_Post[].
 	 * @return array
 	 */
@@ -187,15 +207,53 @@ class PTAI_Public {
 			if ( ! ( $post instanceof WP_Post ) ) {
 				continue;
 			}
+
+			$post_id   = (int) $post->ID;
+			$file_id   = absint( get_post_meta( $post_id, '_ptai_file_id', true ) );
+			$file_type = (string) get_post_meta( $post_id, '_ptai_file_type', true );
+			$file_ext  = (string) get_post_meta( $post_id, '_ptai_file_ext', true );
+			$file_size = absint( get_post_meta( $post_id, '_ptai_file_size', true ) );
+			$downloads = absint( get_post_meta( $post_id, '_ptai_download_count', true ) );
+
+			$icon_class = 'ptai-icon-file';
+			if ( 'application/pdf' === $file_type ) {
+				$icon_class = 'ptai-icon-pdf';
+			} elseif ( 0 === strpos( $file_type, 'image/' ) ) {
+				$icon_class = 'ptai-icon-image';
+			} elseif ( 0 === strpos( $file_type, 'audio/' ) ) {
+				$icon_class = 'ptai-icon-audio';
+			} elseif ( 0 === strpos( $file_type, 'video/' ) ) {
+				$icon_class = 'ptai-icon-video';
+			}
+
+			$meta_bits = array();
+			$type_lbl  = '' !== $file_ext ? strtoupper( $file_ext ) : $file_type;
+			if ( '' !== $type_lbl ) {
+				$meta_bits[] = $type_lbl;
+			}
+			if ( $file_size > 0 ) {
+				$meta_bits[] = size_format( $file_size );
+			}
+			$meta_bits[] = sprintf(
+				/* translators: %s: localized download count. */
+				_n( '%s download', '%s downloads', $downloads, 'papertrail-ai' ),
+				number_format_i18n( $downloads )
+			);
+
 			$out[] = array(
-				'id'           => absint( $post->ID ),
-				'title'        => esc_html( get_the_title( $post ) ),
-				'permalink'    => esc_url( get_permalink( $post ) ),
-				'excerpt'      => esc_html( wp_trim_words( get_the_excerpt( $post ), 20 ) ),
-				'file_type'    => esc_html( (string) get_post_meta( $post->ID, '_ptai_file_type', true ) ),
-				'file_size'    => esc_html( size_format( absint( get_post_meta( $post->ID, '_ptai_file_size', true ) ) ) ),
-				'downloads'    => absint( get_post_meta( $post->ID, '_ptai_download_count', true ) ),
-				'download_url' => esc_url( get_rest_url( null, 'papertrail-ai/v1/download/' . absint( $post->ID ) ) ),
+				'id'           => $post_id,
+				'title'        => sanitize_text_field( wp_strip_all_tags( get_the_title( $post ) ) ),
+				'permalink'    => get_permalink( $post ),
+				'excerpt'      => sanitize_text_field( wp_strip_all_tags( wp_trim_words( get_the_excerpt( $post ), 20 ) ) ),
+				'file_type'    => sanitize_text_field( $file_type ),
+				'file_size'    => $file_size > 0 ? size_format( $file_size ) : '',
+				'downloads'    => $downloads,
+				'meta_text'    => implode( ' · ', $meta_bits ),
+				'icon_class'   => $icon_class,
+				'has_file'     => $file_id > 0,
+				'download_url' => $file_id > 0
+					? get_rest_url( null, 'papertrail-ai/v1/download/' . $post_id )
+					: '',
 			);
 		}
 		return $out;
@@ -218,8 +276,8 @@ class PTAI_Public {
 			$mode = 'auto';
 		}
 
-		// Apply rate limit only when AI is possible.
-		$mode = self::apply_rate_limit( $mode );
+		// Apply rate limit only when AI would actually run.
+		$mode = self::apply_rate_limit( $mode, $query );
 
 		$search  = new PTAI_Search();
 		$results = $search->search(

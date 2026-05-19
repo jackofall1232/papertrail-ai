@@ -116,6 +116,8 @@ class PTAI_Shortcode {
 				'page'     => $paged,
 				'category' => $category_id,
 				'mode'     => $mode,
+				'orderby'  => $orderby,
+				'order'    => $order,
 			)
 		);
 

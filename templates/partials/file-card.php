@@ -21,7 +21,10 @@ $ptai_card_type   = (string) get_post_meta( $ptai_card_id, '_ptai_file_type', tr
 $ptai_card_ext    = (string) get_post_meta( $ptai_card_id, '_ptai_file_ext', true );
 $ptai_card_size   = absint( get_post_meta( $ptai_card_id, '_ptai_file_size', true ) );
 $ptai_card_downs  = absint( get_post_meta( $ptai_card_id, '_ptai_download_count', true ) );
-$ptai_card_dl_url = get_rest_url( null, 'papertrail-ai/v1/download/' . $ptai_card_id );
+$ptai_card_fid    = absint( get_post_meta( $ptai_card_id, '_ptai_file_id', true ) );
+$ptai_card_dl_url = $ptai_card_fid > 0
+	? get_rest_url( null, 'papertrail-ai/v1/download/' . $ptai_card_id )
+	: '';
 
 $ptai_card_icon = 'ptai-icon-file';
 if ( 'application/pdf' === $ptai_card_type ) {
@@ -61,8 +64,10 @@ $ptai_card_label = '' !== $ptai_card_ext ? strtoupper( $ptai_card_ext ) : $ptai_
 			echo esc_html( implode( ' · ', $ptai_meta_bits ) );
 			?>
 		</span>
-		<a class="ptai-download-link" href="<?php echo esc_url( $ptai_card_dl_url ); ?>">
-			<?php esc_html_e( 'Download', 'papertrail-ai' ); ?>
-		</a>
+		<?php if ( $ptai_card_fid > 0 ) : ?>
+			<a class="ptai-download-link" href="<?php echo esc_url( $ptai_card_dl_url ); ?>">
+				<?php esc_html_e( 'Download', 'papertrail-ai' ); ?>
+			</a>
+		<?php endif; ?>
 	</div>
 </li>
