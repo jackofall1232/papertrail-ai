@@ -434,6 +434,28 @@ class PTAI_Settings {
 	}
 
 	/**
+	 * Mirror the `delete_on_uninstall` flag to a standalone option.
+	 *
+	 * uninstall.php runs in a stripped-down WP bootstrap that may not load
+	 * this plugin's classes, so it reads the standalone option directly.
+	 * Wiring this through the `updated_option_ptai_settings` /
+	 * `added_option_ptai_settings` actions guarantees the mirror tracks the
+	 * actually-stored value on every save path — including resets to
+	 * defaults caused by malformed input, programmatic updates, and imports
+	 * — not just successful runs through sanitize_settings().
+	 *
+	 * @return void
+	 */
+	public function sync_uninstall_flag() {
+		$flag = (bool) self::get_option( 'delete_on_uninstall', false );
+		if ( $flag ) {
+			update_option( 'ptai_delete_data_on_uninstall', 1 );
+		} else {
+			delete_option( 'ptai_delete_data_on_uninstall' );
+		}
+	}
+
+	/**
 	 * Get a single option value.
 	 *
 	 * Transparently base64-decodes the OpenAI API key.
