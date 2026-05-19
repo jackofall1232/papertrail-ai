@@ -103,6 +103,23 @@ class PTAI_Embeddings {
 			return;
 		}
 
+		// Source-text hash check — skip the OpenAI round-trip when the
+		// assembled source text is byte-identical to the run that produced
+		// the stored vector. Manual regenerate via generate_embedding()
+		// deliberately bypasses this so admins can force a fresh call.
+		$new_hash = md5( $text );
+		$raw_info = get_post_meta( $post_id, self::META_KEY_INFO, true );
+		$info     = is_string( $raw_info ) ? json_decode( $raw_info, true ) : null;
+		if ( is_array( $info ) && isset( $info['source_hash'] ) && $info['source_hash'] === $new_hash ) {
+			delete_post_meta( $post_id, '_ptai_embedding_queued' );
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions
+					sprintf( 'PaperTrail AI: skipping embedding, source text unchanged for post %d', $post_id )
+				);
+			}
+			return;
+		}
+
 		$key       = (string) PTAI_Settings::get_option( 'openai_api_key', '' );
 		$openai    = new PTAI_OpenAI( $key );
 		$embedding = $openai->get_embedding( $text );
@@ -112,7 +129,7 @@ class PTAI_Embeddings {
 		}
 
 		$this->store_embedding( $post_id, $embedding );
-		$this->write_info( $post_id, $embedding, $text );
+		$this->write_info( $post_id, $embedding, $text, $new_hash );
 	}
 
 	/**
@@ -209,12 +226,23 @@ class PTAI_Embeddings {
 	/**
 	 * Write the embedding info blob (model, dims, timestamp, etc.).
 	 *
+	 * Documented fields on the stored JSON blob:
+	 *  - model:         OpenAI embedding model identifier.
+	 *  - dims:          Vector dimensionality.
+	 *  - generated_at:  Local timestamp in `Y-m-d H:i:s`.
+	 *  - source_length: Byte-length of the source text used.
+	 *  - source_fields: Array of contributing field names.
+	 *  - source_hash:   md5() of the source text — used by
+	 *                   process_embedding_job() to skip no-op
+	 *                   regenerations and avoid extra API spend.
+	 *
 	 * @param int               $post_id   Post ID.
 	 * @param array<int,float>  $embedding Vector.
 	 * @param string            $text      Source text used.
+	 * @param string|null       $hash      Pre-computed md5 of $text. Null = compute here.
 	 * @return void
 	 */
-	private function write_info( $post_id, array $embedding, $text ) {
+	private function write_info( $post_id, array $embedding, $text, $hash = null ) {
 		update_post_meta(
 			$post_id,
 			self::META_KEY_INFO,
@@ -225,6 +253,7 @@ class PTAI_Embeddings {
 					'generated_at'  => current_time( 'mysql' ),
 					'source_length' => strlen( $text ),
 					'source_fields' => $this->get_source_fields( $post_id ),
+					'source_hash'   => null === $hash ? md5( $text ) : (string) $hash,
 				)
 			)
 		);
