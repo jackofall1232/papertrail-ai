@@ -99,4 +99,126 @@
 		}
 	);
 
+	/* 4. Settings page tabs
+	--------------------------------------------------------- */
+	$( function () {
+		var $wrap    = $( '.ptai-settings-wrap' );
+		var $tabNav  = $wrap.find( '.ptai-tab-nav' );
+		var $form    = $wrap.find( '.ptai-settings-main form' );
+		var $tabBtns = $tabNav.find( '.ptai-tab-btn' );
+		if ( ! $tabNav.length || ! $form.length || ! $tabBtns.length ) {
+			return;
+		}
+
+		var $headings = $form.children( 'h2' );
+
+		// If section count differs from tab count (e.g. another plugin
+		// injected a settings section), bail out: nav stays hidden via
+		// CSS and the form renders flat.
+		if ( $headings.length !== $tabBtns.length ) {
+			return;
+		}
+
+		// Wrap each section heading + its following siblings (up to the
+		// next h2 or the .submit row) into a tab panel whose id matches
+		// the corresponding tab button's data-tab. The .submit row is
+		// intentionally left outside so the save button stays visible.
+		$headings.each( function ( i ) {
+			var $btn   = $tabBtns.eq( i );
+			var tabId  = $btn.data( 'tab' );
+			if ( ! tabId ) {
+				return;
+			}
+
+			var $h     = $( this );
+			var $group = $h.nextUntil( 'h2, .submit' );
+
+			// Give the button a stable id so aria-labelledby can point at it.
+			var btnId = $btn.attr( 'id' );
+			if ( ! btnId ) {
+				btnId = tabId + '-tab';
+				$btn.attr( 'id', btnId );
+			}
+
+			var $panel = $( '<div></div>' )
+				.attr( 'id', tabId )
+				.attr( 'role', 'tabpanel' )
+				.attr( 'aria-labelledby', btnId )
+				.addClass( 'ptai-tab-panel' );
+
+			$h.before( $panel );
+			$panel.append( $h ).append( $group );
+
+			if ( 0 === i ) {
+				$panel.addClass( 'ptai-tab-panel--active' );
+			}
+		} );
+
+		// Roving tabindex — only the active tab is in the tab order.
+		$tabBtns.attr( 'tabindex', '-1' );
+		$tabBtns.filter( '.ptai-tab-btn--active' ).attr( 'tabindex', '0' );
+
+		// Reveal the nav now that the panels are wired up.
+		$wrap.addClass( 'ptai-tabs-ready' );
+
+		function activateTab( $btn, focus ) {
+			if ( ! $btn || ! $btn.length ) {
+				return;
+			}
+			var target = $btn.data( 'tab' );
+			if ( ! target ) {
+				return;
+			}
+
+			$tabBtns
+				.removeClass( 'ptai-tab-btn--active' )
+				.attr( 'aria-selected', 'false' )
+				.attr( 'tabindex', '-1' );
+			$btn.addClass( 'ptai-tab-btn--active' )
+				.attr( 'aria-selected', 'true' )
+				.attr( 'tabindex', '0' );
+
+			$form.find( '.ptai-tab-panel' )
+				.removeClass( 'ptai-tab-panel--active' );
+			$form.find( '#' + target )
+				.addClass( 'ptai-tab-panel--active' );
+
+			if ( focus ) {
+				$btn.trigger( 'focus' );
+			}
+		}
+
+		$tabNav.on( 'click', '.ptai-tab-btn', function ( e ) {
+			e.preventDefault();
+			activateTab( $( this ), false );
+		} );
+
+		// WAI-ARIA tablist keyboard support: Left/Right cycle, Home/End jump.
+		$tabNav.on( 'keydown', '.ptai-tab-btn', function ( e ) {
+			var key = e.key;
+			if (
+				'ArrowLeft'  !== key &&
+				'ArrowRight' !== key &&
+				'Home'       !== key &&
+				'End'        !== key
+			) {
+				return;
+			}
+			e.preventDefault();
+			var index = $tabBtns.index( this );
+			var last  = $tabBtns.length - 1;
+			var next;
+			if ( 'ArrowLeft' === key ) {
+				next = 0 === index ? last : index - 1;
+			} else if ( 'ArrowRight' === key ) {
+				next = index === last ? 0 : index + 1;
+			} else if ( 'Home' === key ) {
+				next = 0;
+			} else {
+				next = last;
+			}
+			activateTab( $tabBtns.eq( next ), true );
+		} );
+	} );
+
 } ( jQuery, window.ptaiAdmin || {} ) );

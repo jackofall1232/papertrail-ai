@@ -74,7 +74,7 @@ class PTAI_CPT {
 			'show_in_rest'       => true,
 			'rest_base'          => 'ptai-files',
 			'menu_position'      => 20,
-			'menu_icon'          => 'dashicons-media-document',
+			'menu_icon'          => 'dashicons-clipboard',
 			'capability_type'    => 'post',
 			'map_meta_cap'       => true,
 			'hierarchical'       => false,
