@@ -222,12 +222,11 @@
 
 /* 5. Tab Panels
 ------------------------------------------------------------- */
-/* Form-section panels are wrapped by JS. Static panels (e.g. the
-   help tab) are server-rendered with .ptai-tab-panel. Both the
-   hide rule and the active rule are scoped to .ptai-tabs-ready so
-   that, when JS is absent or bails out, static panels stay visible
-   and the form sections render flat — paired with the hidden
-   .ptai-tab-nav, this is the no-JS fallback. */
+/* Panels are server-rendered around the settings fields and the
+   help content. JS removes .ptai-no-js and adds .ptai-tabs-ready
+   on load — until then the no-JS fallback rules below keep every
+   panel visible and the tab nav hidden, so the page is usable
+   without JavaScript. */
 .ptai-tabs-ready .ptai-tab-panel {
     display: none;
 }
@@ -235,6 +234,11 @@
 .ptai-tabs-ready .ptai-tab-panel--active {
     display: block;
 }
+
+/* No-JS fallback — show all panels, hide the nav.
+   JS removes ptai-no-js and adds ptai-tabs-ready on load. */
+.ptai-no-js .ptai-tab-nav   { display: none !important; }
+.ptai-no-js .ptai-tab-panel { display: block !important; }
 
 /* 6. Settings Layout
 ------------------------------------------------------------- */
