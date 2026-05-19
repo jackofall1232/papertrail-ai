@@ -162,6 +162,14 @@ function ptai_bootstrap() {
 		$ptai_embeddings = new PTAI_Embeddings();
 		$ptai_embeddings->init();
 	}
+	if ( class_exists( 'PTAI_Shortcode' ) ) {
+		new PTAI_Shortcode();
+	}
+	if ( class_exists( 'PTAI_Public' ) ) {
+		// Instantiated on every request — registers both frontend
+		// enqueue/template hooks AND admin-ajax search handlers.
+		new PTAI_Public();
+	}
 	if ( is_admin() ) {
 		if ( class_exists( 'PTAI_Settings' ) ) {
 			new PTAI_Settings();
@@ -174,9 +182,10 @@ function ptai_bootstrap() {
 add_action( 'plugins_loaded', 'ptai_bootstrap' );
 
 /**
- * Register the file download REST endpoint.
+ * Register the file download and search REST endpoints.
  *
- * GET /wp-json/papertrail-ai/v1/download/{id}
+ *   GET /wp-json/papertrail-ai/v1/download/{id}
+ *   GET /wp-json/papertrail-ai/v1/search?q=...
  */
 add_action(
 	'rest_api_init',
@@ -195,6 +204,49 @@ add_action(
 							return is_numeric( $param ) && (int) $param > 0;
 						},
 						'sanitize_callback' => 'absint',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			'papertrail-ai/v1',
+			'/search',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => 'ptai_handle_search',
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'q'        => array(
+						'required'          => false,
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => static function ( $param ) {
+							return is_string( $param ) && strlen( $param ) <= 200;
+						},
+					),
+					'category' => array(
+						'required'          => false,
+						'default'           => 0,
+						'sanitize_callback' => 'absint',
+					),
+					'page'     => array(
+						'required'          => false,
+						'default'           => 1,
+						'sanitize_callback' => 'absint',
+					),
+					'per_page' => array(
+						'required'          => false,
+						'default'           => 10,
+						'sanitize_callback' => 'absint',
+					),
+					'mode'     => array(
+						'required'          => false,
+						'default'           => 'auto',
+						'sanitize_callback' => 'sanitize_key',
+						'validate_callback' => static function ( $param ) {
+							return in_array( $param, array( 'auto', 'ai', 'core' ), true );
+						},
 					),
 				),
 			)
@@ -267,4 +319,50 @@ function ptai_handle_download( WP_REST_Request $request ) {
 	nocache_headers();
 	wp_safe_redirect( $url, 302 );
 	exit;
+}
+
+/**
+ * Handle the REST search request.
+ *
+ * @param WP_REST_Request $request Request object.
+ * @return WP_REST_Response
+ */
+function ptai_handle_search( WP_REST_Request $request ) {
+	$q        = (string) $request->get_param( 'q' );
+	$category = absint( $request->get_param( 'category' ) );
+	$page     = max( 1, absint( $request->get_param( 'page' ) ) );
+	$per_page = min( 50, max( 1, absint( $request->get_param( 'per_page' ) ) ) );
+	$mode     = sanitize_key( (string) $request->get_param( 'mode' ) );
+
+	if ( ! in_array( $mode, array( 'auto', 'ai', 'core' ), true ) ) {
+		$mode = 'auto';
+	}
+
+	// Same hourly rate limit as the AJAX handler. Free version cap to
+	// prevent the plugin from acting as an open OpenAI proxy. Skip empty
+	// queries and AI-off sites so they don't consume the bucket.
+	if ( class_exists( 'PTAI_Public' ) ) {
+		$mode = PTAI_Public::apply_rate_limit( $mode, $q );
+	}
+
+	$search  = new PTAI_Search();
+	$results = $search->search(
+		$q,
+		array(
+			'per_page' => $per_page,
+			'page'     => $page,
+			'category' => $category,
+			'mode'     => $mode,
+		)
+	);
+
+	$data = array(
+		'posts'     => PTAI_Public::format_posts_for_response( $results['posts'] ),
+		'total'     => absint( $results['total'] ),
+		'pages'     => absint( $results['pages'] ),
+		'mode_used' => sanitize_key( $results['mode_used'] ),
+		'query'     => sanitize_text_field( $q ),
+	);
+
+	return new WP_REST_Response( $data, 200 );
 }

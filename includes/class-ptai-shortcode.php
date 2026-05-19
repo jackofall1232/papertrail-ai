@@ -1,6 +1,6 @@
 <?php
 /**
- * [papertrail_ai] shortcode handler.
+ * [papertrail] shortcode handler.
  *
  * @package PaperTrail_AI
  */
@@ -10,7 +10,9 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Class PTAI_Shortcode
  *
- * Registers and renders the front-end shortcode for the document library.
+ * Registers and renders the front-end [papertrail] shortcode for the
+ * document library. The Pro-only [papertrail_ask] Q&A shortcode is
+ * intentionally NOT registered here.
  */
 class PTAI_Shortcode {
 
@@ -19,13 +21,13 @@ class PTAI_Shortcode {
 	 *
 	 * @var string
 	 */
-	const TAG = 'papertrail_ai';
+	const TAG = 'papertrail';
 
 	/**
-	 * Constructor.
+	 * Constructor. Wires the shortcode registration to `init`.
 	 */
 	public function __construct() {
-		// @todo Call $this->register() on init.
+		add_action( 'init', array( $this, 'register' ) );
 	}
 
 	/**
@@ -38,52 +40,150 @@ class PTAI_Shortcode {
 	}
 
 	/**
-	 * Render the shortcode.
-	 *
-	 * @param array       $atts    Shortcode attributes.
-	 * @param string|null $content Inner content.
-	 * @return string
-	 */
-	public function render( $atts = array(), $content = null ) {
-		// @todo Parse atts, query files, render list and/or search bar.
-		return '';
-	}
-
-	/**
-	 * Render the file list portion.
-	 *
-	 * @param array $posts WP_Post objects.
-	 * @param array $atts  Shortcode attributes.
-	 * @return string
-	 */
-	public function render_list( $posts, $atts ) {
-		// @todo Load templates/partials/file-card.php for each post.
-		return '';
-	}
-
-	/**
-	 * Render the optional search bar.
-	 *
-	 * @param array $atts Shortcode attributes.
-	 * @return string
-	 */
-	public function render_search_bar( $atts ) {
-		// @todo Load templates/partials/search-bar.php.
-		return '';
-	}
-
-	/**
 	 * Default shortcode attribute values.
 	 *
-	 * @return array
+	 * @return array<string,mixed>
 	 */
 	public function get_default_atts() {
 		return array(
-			'limit'     => 10,
-			'category'  => '',
-			'search'    => 'yes',
-			'orderby'   => 'date',
-			'order'     => 'DESC',
+			'category'    => '',
+			'per_page'    => 10,
+			'show_search' => 'true',
+			'columns'     => 1,
+			'orderby'     => 'date',
+			'order'       => 'DESC',
+			'mode'        => 'auto',
 		);
+	}
+
+	/**
+	 * Render the shortcode. MUST return a string — never echo.
+	 *
+	 * @param array       $atts    Shortcode attributes.
+	 * @param string|null $content Inner content (unused).
+	 * @return string
+	 */
+	public function render( $atts = array(), $content = null ) {
+		$atts = shortcode_atts( $this->get_default_atts(), is_array( $atts ) ? $atts : array(), self::TAG );
+
+		$category    = sanitize_text_field( (string) $atts['category'] );
+		$per_page    = max( 1, min( 50, absint( $atts['per_page'] ) ) );
+		$show_search = ( 'true' === strtolower( (string) $atts['show_search'] ) );
+		$columns     = absint( $atts['columns'] );
+		$columns     = ( 2 === $columns ) ? 2 : 1;
+
+		$orderby = sanitize_key( (string) $atts['orderby'] );
+		if ( ! in_array( $orderby, array( 'date', 'title', 'downloads' ), true ) ) {
+			$orderby = 'date';
+		}
+
+		$order = strtoupper( (string) $atts['order'] );
+		if ( ! in_array( $order, array( 'ASC', 'DESC' ), true ) ) {
+			$order = 'DESC';
+		}
+
+		$mode = sanitize_key( (string) $atts['mode'] );
+		if ( ! in_array( $mode, array( 'auto', 'ai', 'core' ), true ) ) {
+			$mode = 'auto';
+		}
+
+		// Resolve category to a term_id.
+		$category_id = 0;
+		if ( '' !== $category ) {
+			if ( is_numeric( $category ) ) {
+				$category_id = absint( $category );
+			} else {
+				$term = get_term_by( 'slug', $category, PTAI_TAXONOMY );
+				if ( $term && ! is_wp_error( $term ) ) {
+					$category_id = (int) $term->term_id;
+				}
+			}
+		}
+
+		$paged = max( 1, absint( get_query_var( 'paged', 1 ) ) );
+
+		// Use the visitor's query string if a search was submitted.
+		$query_string = '';
+		if ( isset( $_GET['ptai_q'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$query_string = sanitize_text_field( wp_unslash( $_GET['ptai_q'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		}
+
+		$search  = new PTAI_Search();
+		$results = $search->search(
+			$query_string,
+			array(
+				'per_page' => $per_page,
+				'page'     => $paged,
+				'category' => $category_id,
+				'mode'     => $mode,
+				'orderby'  => $orderby,
+				'order'    => $order,
+			)
+		);
+
+		ob_start();
+
+		if ( $show_search ) {
+			echo $this->render_search_bar( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				array(
+					'category_id' => $category_id,
+					'mode'        => $mode,
+				)
+			);
+		}
+
+		$this->render_archive( $results, $columns );
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Render the archive template with the given results.
+	 *
+	 * @param array $results Search result array.
+	 * @param int   $columns Column count.
+	 * @return void
+	 */
+	private function render_archive( $results, $columns ) {
+		$template = PTAI_PLUGIN_DIR . 'templates/archive-ptai.php';
+
+		// Theme override.
+		$theme_template = get_stylesheet_directory() . '/papertrail-ai/archive-ptai.php';
+		if ( file_exists( $theme_template ) ) {
+			$template = $theme_template;
+		}
+
+		if ( file_exists( $template ) ) {
+			// Variables consumed by the template.
+			$ptai_results        = $results; // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+			$ptai_columns        = (int) $columns; // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+			$ptai_in_shortcode   = true; // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+			include $template;
+		}
+	}
+
+	/**
+	 * Render the search-bar partial and return the HTML.
+	 *
+	 * @param array $context Extra context (selected category id, mode).
+	 * @return string
+	 */
+	public function render_search_bar( $context = array() ) {
+		$template = PTAI_PLUGIN_DIR . 'templates/partials/search-bar.php';
+
+		$theme_template = get_stylesheet_directory() . '/papertrail-ai/partials/search-bar.php';
+		if ( file_exists( $theme_template ) ) {
+			$template = $theme_template;
+		}
+
+		if ( ! file_exists( $template ) ) {
+			return '';
+		}
+
+		$ptai_search_context = is_array( $context ) ? $context : array(); // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+
+		ob_start();
+		include $template;
+		return (string) ob_get_clean();
 	}
 }

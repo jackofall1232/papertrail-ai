@@ -46,9 +46,13 @@ class PTAI_Admin {
 		add_filter( 'plugin_action_links_' . PTAI_PLUGIN_BASENAME, array( $this, 'add_plugin_action_links' ) );
 
 		add_action( 'admin_notices', array( $this, 'render_ai_status_notice' ) );
+		add_action( 'admin_notices', array( $this, 'render_size_limit_notice' ) );
 		add_filter( 'post_row_actions', array( $this, 'add_row_actions' ), 10, 2 );
 		add_action( 'admin_post_ptai_regenerate_embedding', array( $this, 'handle_regenerate_embedding' ) );
 		add_action( 'wp_ajax_ptai_dismiss_ai_notice', array( $this, 'handle_dismiss_ai_notice' ) );
+
+		add_filter( 'bulk_actions-edit-' . PTAI_CPT, array( $this, 'add_bulk_actions' ) );
+		add_filter( 'handle_bulk_actions-edit-' . PTAI_CPT, array( $this, 'handle_bulk_action' ), 10, 3 );
 	}
 
 	/**
@@ -838,5 +842,135 @@ class PTAI_Admin {
 
 		wp_safe_redirect( $redirect );
 		exit;
+	}
+
+	/**
+	 * Register bulk actions on the CPT list table.
+	 *
+	 * @param array $actions Existing bulk actions.
+	 * @return array
+	 */
+	public function add_bulk_actions( $actions ) {
+		$actions['ptai_regen_missing'] = __( 'Regenerate missing/stale embeddings', 'papertrail-ai' );
+		$actions['ptai_regen_all']     = __( 'Force regenerate ALL embeddings', 'papertrail-ai' );
+		return $actions;
+	}
+
+	/**
+	 * Handle the embedding bulk regenerate actions.
+	 *
+	 * WP core verifies the list-table bulk-action nonce before invoking
+	 * this filter (`_wpnonce` on the form). We just need a capability check.
+	 *
+	 * @param string $redirect_url Redirect target.
+	 * @param string $action       Action key.
+	 * @param array  $post_ids     Selected post IDs.
+	 * @return string
+	 */
+	public function handle_bulk_action( $redirect_url, $action, $post_ids ) {
+		if ( ! in_array( $action, array( 'ptai_regen_missing', 'ptai_regen_all' ), true ) ) {
+			return $redirect_url;
+		}
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			return $redirect_url;
+		}
+
+		$embeddings = new PTAI_Embeddings();
+		$processed  = 0;
+		$skipped    = 0;
+		$failed     = 0;
+
+		foreach ( (array) $post_ids as $post_id ) {
+			$post_id = absint( $post_id );
+			if ( $post_id < 1 ) {
+				continue;
+			}
+			if ( PTAI_CPT !== get_post_type( $post_id ) ) {
+				continue;
+			}
+
+			if ( 'ptai_regen_missing' === $action ) {
+				$status = $embeddings->get_embedding_status( $post_id );
+				if ( 'current' === $status ) {
+					$skipped++;
+					continue;
+				}
+			}
+
+			$result = $embeddings->generate_embedding( $post_id );
+			if ( $result ) {
+				$processed++;
+			} else {
+				$failed++;
+			}
+		}
+
+		return add_query_arg(
+			array(
+				'ptai_bulk_regen'      => 'done',
+				'ptai_regen_processed' => $processed,
+				'ptai_regen_skipped'   => $skipped,
+				'ptai_regen_failed'    => $failed,
+			),
+			$redirect_url
+		);
+	}
+
+	/**
+	 * Render notice if the library exceeds the in-PHP scoring limit.
+	 *
+	 * @return void
+	 */
+	public function render_size_limit_notice() {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || PTAI_CPT !== $screen->post_type ) {
+			return;
+		}
+
+		// Bulk regenerate summary takes precedence on the list table.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['ptai_bulk_regen'] ) && 'done' === $_GET['ptai_bulk_regen'] ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$processed = isset( $_GET['ptai_regen_processed'] ) ? absint( wp_unslash( $_GET['ptai_regen_processed'] ) ) : 0;
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$skipped   = isset( $_GET['ptai_regen_skipped'] ) ? absint( wp_unslash( $_GET['ptai_regen_skipped'] ) ) : 0;
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$failed    = isset( $_GET['ptai_regen_failed'] ) ? absint( wp_unslash( $_GET['ptai_regen_failed'] ) ) : 0;
+
+			$message = sprintf(
+				/* translators: 1: regenerated count, 2: skipped count */
+				__( 'Regenerated %1$d embeddings. Skipped %2$d (already current).', 'papertrail-ai' ),
+				$processed,
+				$skipped
+			);
+			if ( $failed > 0 ) {
+				$message .= ' ' . sprintf(
+					/* translators: %d: failed count */
+					__( '%d failed — check your OpenAI API key.', 'papertrail-ai' ),
+					$failed
+				);
+			}
+
+			$class = $failed > 0 ? 'notice-warning' : 'notice-success';
+			printf(
+				'<div class="notice %1$s is-dismissible"><p>%2$s</p></div>',
+				esc_attr( $class ),
+				esc_html( $message )
+			);
+		}
+
+		if ( class_exists( 'PTAI_Search' ) && PTAI_Search::is_over_limit() ) {
+			printf(
+				'<div class="notice notice-warning"><p>%s</p></div>',
+				esc_html(
+					sprintf(
+						/* translators: %d: maximum number of documents scored per AI search. */
+						__( 'PaperTrail AI: Your library exceeds %d documents. The free version scores only the most recent %d during AI search. Upgrade to Pro for full-library vector search.', 'papertrail-ai' ),
+						PTAI_Search::MAX_SCORED_POSTS,
+						PTAI_Search::MAX_SCORED_POSTS
+					)
+				)
+			);
+		}
 	}
 }
