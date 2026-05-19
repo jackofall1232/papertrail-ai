@@ -23,14 +23,10 @@ class PTAI_CPT {
 	const REWRITE_VERSION_OPTION = 'ptai_rewrite_version';
 
 	/**
-	 * Constructor. Wires registration to `init`.
+	 * Constructor. Intentionally side-effect-free — all hooks live in
+	 * PTAI_Loader::define_core_hooks().
 	 */
-	public function __construct() {
-		add_action( 'init', array( $this, 'register_post_type' ) );
-		add_action( 'init', array( $this, 'register_taxonomy' ) );
-		add_action( 'init', array( $this, 'register_meta_fields' ) );
-		add_action( 'init', array( $this, 'flush_rewrite_rules_if_needed' ), 99 );
-	}
+	public function __construct() {}
 
 	/**
 	 * Register the ptai_file custom post type.

@@ -57,6 +57,10 @@ PaperTrail AI is a self-contained WordPress document library that you host and c
 
 Any file type your WordPress media library accepts can be attached to a PaperTrail AI file entry, including PDFs, Word documents (.doc/.docx), spreadsheets (.xls/.xlsx/.csv), presentations (.ppt/.pptx), images (.jpg/.png/.gif/.webp), and plain text files. You can extend supported MIME types using the standard `upload_mimes` WordPress filter. SVG is intentionally excluded — it is a stored XSS vector. SVG support requires dedicated sanitization — available in Pro.
 
+= Is PaperTrail AI available in my language? =
+
+PaperTrail AI is translation-ready. A .pot file is included in the languages/ folder. If you would like to contribute a translation, please get in touch via https://askadamit.com/contact.
+
 == Changelog ==
 
 = 1.0.0 =

@@ -21,16 +21,10 @@ class PTAI_Public {
 	const RATE_LIMIT_PER_HOUR = 60;
 
 	/**
-	 * Constructor — wires hooks directly.
+	 * Constructor. Intentionally side-effect-free — all hooks live in
+	 * PTAI_Loader::define_public_hooks() and define_ajax_hooks().
 	 */
-	public function __construct() {
-		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_styles' ) );
-		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
-		add_filter( 'template_include', array( $this, 'template_include' ) );
-
-		add_action( 'wp_ajax_ptai_search', array( $this, 'handle_search_ajax' ) );
-		add_action( 'wp_ajax_nopriv_ptai_search', array( $this, 'handle_search_ajax' ) );
-	}
+	public function __construct() {}
 
 	/**
 	 * Whether the current request should load the public assets.
@@ -50,8 +44,14 @@ class PTAI_Public {
 
 		if ( is_singular() ) {
 			$post = get_post();
-			if ( $post && has_shortcode( (string) $post->post_content, PTAI_Shortcode::TAG ) ) {
-				return true;
+			if ( $post ) {
+				$content = (string) $post->post_content;
+				if ( has_shortcode( $content, PTAI_Shortcode::TAG ) ) {
+					return true;
+				}
+				if ( function_exists( 'has_block' ) && has_block( PTAI_Block::BLOCK_NAME, $post ) ) {
+					return true;
+				}
 			}
 		}
 
@@ -61,30 +61,39 @@ class PTAI_Public {
 	/**
 	 * Enqueue public styles.
 	 *
+	 * Registers the style handle unconditionally so block.json's `style`
+	 * reference resolves on block-only pages (where register_block_type()
+	 * does the enqueue). Conditional enqueue still applies for shortcode
+	 * and CPT/archive/taxonomy contexts.
+	 *
 	 * @return void
 	 */
 	public function enqueue_styles() {
-		if ( ! $this->should_enqueue_assets() ) {
-			return;
-		}
-		wp_enqueue_style(
+		wp_register_style(
 			'papertrail-ai-public',
 			PTAI_PLUGIN_URL . 'public/css/public.css',
 			array(),
 			PTAI_VERSION
 		);
+
+		if ( ! $this->should_enqueue_assets() ) {
+			return;
+		}
+		wp_enqueue_style( 'papertrail-ai-public' );
 	}
 
 	/**
 	 * Enqueue public scripts.
 	 *
+	 * Registers the script handle unconditionally so block.json's
+	 * `viewScript` reference resolves on block-only pages. The localized
+	 * `ptaiPublic` object is attached at registration time so it ships
+	 * with the handle regardless of which path enqueues it.
+	 *
 	 * @return void
 	 */
 	public function enqueue_scripts() {
-		if ( ! $this->should_enqueue_assets() ) {
-			return;
-		}
-		wp_enqueue_script(
+		wp_register_script(
 			'papertrail-ai-public',
 			PTAI_PLUGIN_URL . 'public/js/public.js',
 			array( 'jquery' ),
@@ -106,6 +115,11 @@ class PTAI_Public {
 				),
 			)
 		);
+
+		if ( ! $this->should_enqueue_assets() ) {
+			return;
+		}
+		wp_enqueue_script( 'papertrail-ai-public' );
 	}
 
 	/**
@@ -174,7 +188,8 @@ class PTAI_Public {
 			return $mode;
 		}
 
-		$window = current_time( 'Y-m-d-H' );
+		// gmdate() — timezone-agnostic hourly bucket for rate limiting.
+		$window = gmdate( 'Y-m-d-H' );
 		$salt   = wp_salt( 'auth' );
 		$token  = hash( 'sha256', 'search' . $window . $salt );
 		$key    = 'ptai_srch_' . substr( $token, 0, 40 );

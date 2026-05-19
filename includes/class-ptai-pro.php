@@ -48,9 +48,6 @@ class PTAI_Pro {
 	 * @return void
 	 */
 	public function render_upgrade_sidebar() {
-		// @todo Echo a sidebar/aside element with a heading,
-		//       the features list from get_pro_features_list(),
-		//       and a button linking to get_purchase_url().
 		?>
 		<aside class="ptai-upgrade-sidebar" aria-label="<?php esc_attr_e( 'Ask Adam Pro', 'papertrail-ai' ); ?>">
 			<h2 class="ptai-upgrade-sidebar__title">
