@@ -3,7 +3,7 @@
  * Plugin Name:       PaperTrail AI — Smart Document Library
  * Plugin URI:        https://example.com/papertrail-ai
  * Description:       AI-powered document library for WordPress. Upload, organize, and semantically search files using OpenAI embeddings.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Ask Adam
@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Plugin constants.
  */
-define( 'PTAI_VERSION', '1.0.0' );
+define( 'PTAI_VERSION', '1.0.1' );
 define( 'PTAI_PLUGIN_FILE', __FILE__ );
 define( 'PTAI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PTAI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
