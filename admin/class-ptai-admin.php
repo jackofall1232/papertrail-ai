@@ -617,46 +617,73 @@ class PTAI_Admin {
 							: array();
 
 						$sections = array(
-							'ptai-tab-ai'       => 'ptai_section_ai',
-							'ptai-tab-uploads'  => 'ptai_section_uploads',
-							'ptai-tab-access'   => 'ptai_section_access',
-							'ptai-tab-advanced' => 'ptai_section_advanced',
+							'ptai-tab-ai'       => array(
+								'section_id' => 'ptai_section_ai',
+								'icon'       => 'superhero-alt',
+								'title'      => __( 'AI Configuration', 'papertrail-ai' ),
+							),
+							'ptai-tab-uploads'  => array(
+								'section_id' => 'ptai_section_uploads',
+								'icon'       => 'upload',
+								'title'      => __( 'Upload Settings', 'papertrail-ai' ),
+							),
+							'ptai-tab-access'   => array(
+								'section_id' => 'ptai_section_access',
+								'icon'       => 'groups',
+								'title'      => __( 'Access Control', 'papertrail-ai' ),
+							),
+							'ptai-tab-advanced' => array(
+								'section_id' => 'ptai_section_advanced',
+								'icon'       => 'admin-tools',
+								'title'      => __( 'Advanced', 'papertrail-ai' ),
+							),
 						);
 
 						$first = true;
-						foreach ( $sections as $tab_id => $section_id ) {
-							$btn_id = str_replace( 'ptai-tab-', 'tab-btn-', $tab_id );
-							$active = $first ? ' ptai-tab-panel--active' : '';
+						foreach ( $sections as $tab_id => $info ) {
+							$section_id = $info['section_id'];
+							$btn_id     = str_replace( 'ptai-tab-', 'tab-btn-', $tab_id );
+							$active     = $first ? ' ptai-tab-panel--active' : '';
 							?>
 							<div id="<?php echo esc_attr( $tab_id ); ?>"
 								class="ptai-tab-panel<?php echo esc_attr( $active ); ?>"
 								role="tabpanel"
 								aria-labelledby="<?php echo esc_attr( $btn_id ); ?>">
-								<?php
-								// Render the section description callback (the section
-								// title is intentionally omitted — the tab button is
-								// the section heading). do_settings_fields() below
-								// only outputs the field <tr> rows, so without this
-								// the descriptions registered via add_settings_section
-								// would silently disappear.
-								if ( isset( $page_sections[ $section_id ]['callback'] )
-									&& is_callable( $page_sections[ $section_id ]['callback'] ) ) {
-									call_user_func(
-										$page_sections[ $section_id ]['callback'],
-										$page_sections[ $section_id ]
-									);
-								}
-								?>
-								<table class="form-table" role="presentation">
-									<tbody>
-										<?php
-										do_settings_fields(
-											PTAI_Settings::PAGE_SLUG,
-											$section_id
+								<div class="ptai-panel-card">
+									<h2 class="ptai-panel-heading">
+										<span class="dashicons dashicons-<?php echo esc_attr( $info['icon'] ); ?>"
+											aria-hidden="true"></span>
+										<?php echo esc_html( $info['title'] ); ?>
+									</h2>
+									<?php
+									// Render the section description callback. The
+									// section title is intentionally suppressed here —
+									// the panel heading above and the tab button both
+									// already name the section. do_settings_fields()
+									// below only outputs <tr> rows, so without this
+									// the descriptions registered via
+									// add_settings_section would silently disappear.
+									if ( isset( $page_sections[ $section_id ]['callback'] )
+										&& is_callable( $page_sections[ $section_id ]['callback'] ) ) {
+										echo '<div class="ptai-panel-description">';
+										call_user_func(
+											$page_sections[ $section_id ]['callback'],
+											$page_sections[ $section_id ]
 										);
-										?>
-									</tbody>
-								</table>
+										echo '</div>';
+									}
+									?>
+									<table class="form-table" role="presentation">
+										<tbody>
+											<?php
+											do_settings_fields(
+												PTAI_Settings::PAGE_SLUG,
+												$section_id
+											);
+											?>
+										</tbody>
+									</table>
+								</div>
 							</div>
 							<?php
 							$first = false;
@@ -664,10 +691,13 @@ class PTAI_Admin {
 
 						// Render any extra sections registered by add-ons or site
 						// code against this page slug that aren't part of our tab
-						// layout. They appear as flat blocks below the tab panels
-						// so their UI stays reachable instead of silently
-						// disappearing. Mirrors do_settings_sections() output.
-						$known_section_ids = array_values( $sections );
+						// layout. They appear as themed cards below the tab panels
+						// so their UI stays reachable (and visually consistent)
+						// instead of silently disappearing.
+						$known_section_ids = array();
+						foreach ( $sections as $info ) {
+							$known_section_ids[] = $info['section_id'];
+						}
 						foreach ( $page_sections as $section ) {
 							if ( ! is_array( $section ) || empty( $section['id'] ) ) {
 								continue;
@@ -675,15 +705,21 @@ class PTAI_Admin {
 							if ( in_array( $section['id'], $known_section_ids, true ) ) {
 								continue;
 							}
+							echo '<div class="ptai-panel-card">';
 							if ( ! empty( $section['title'] ) ) {
-								echo '<h2>' . esc_html( $section['title'] ) . '</h2>';
+								echo '<h2 class="ptai-panel-heading">'
+									. esc_html( $section['title'] )
+									. '</h2>';
 							}
 							if ( ! empty( $section['callback'] ) && is_callable( $section['callback'] ) ) {
+								echo '<div class="ptai-panel-description">';
 								call_user_func( $section['callback'], $section );
+								echo '</div>';
 							}
 							echo '<table class="form-table" role="presentation"><tbody>';
 							do_settings_fields( PTAI_Settings::PAGE_SLUG, $section['id'] );
 							echo '</tbody></table>';
+							echo '</div>';
 						}
 						?>
 
